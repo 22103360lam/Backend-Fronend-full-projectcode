@@ -1,41 +1,69 @@
-import React, { useState } from 'react'
-import Addmaterial from '../Adminpages/Addmaterial'
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import AddMaterial from '../Adminpages/AddMaterial';
 
-export default function Materialmaincontainer() {
-  const [showModal, setShowModal] = useState(false)
-  const [editMaterial, setEditMaterial] = useState(null)
+export default function MaterialMainContainer() {
+  const [showModal, setShowModal] = useState(false);
+  const [editMaterial, setEditMaterial] = useState(null);
+  const [materials, setMaterials] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const [materials, setMaterials] = useState([
-    { id: "001", name: "Cotton Fabric", stock: 15, minRequired: 50, supplier: "Global Fabrics", status: "Low Stock" },
-    { id: "002", name: "Silk Fabric", stock: 100, minRequired: 50, supplier: "Silk World", status: "In Stock" },
-    { id: "003", name: "Polyester Threads", stock: 75, minRequired: 30, supplier: "Thread Co.", status: "In Stock" },
-    { id: "004", name: "Buttons", stock: 8, minRequired: 20, supplier: "Button Ltd.", status: "Low Stock" },
-    { id: "005", name: "Zippers", stock: 45, minRequired: 25, supplier: "Zip Masters", status: "In Stock" }
-  ])
+  const itemsPerPage = 5;
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 5
+  useEffect(() => {
+    fetchMaterials();
+  }, []);
 
-  const handleAdd = () => { setEditMaterial(null); setShowModal(true) }
-  const handleEdit = (material) => { setEditMaterial(material); setShowModal(true) }
-  const closeModal = () => { setShowModal(false); setEditMaterial(null) }
-  const handleDelete = (id) => { if (window.confirm("Are you sure you want to delete this material?")) setMaterials(prev => prev.filter(m => m.id !== id)) }
+  const fetchMaterials = async () => {
+    try {
+      const res = await axios.get('http://127.0.0.1:8000/api/raw-materials');
+      setMaterials(res.data);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to fetch materials');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const handleSaveMaterial = (data) => {
-    if (editMaterial) setMaterials(prev => prev.map(m => m.id === editMaterial.id ? { ...m, ...data } : m))
-    else setMaterials(prev => [...prev, { ...data, id: Date.now().toString(), status: data.stock < data.minRequired ? "Low Stock" : "In Stock" }])
-    closeModal()
-  }
+  const handleAdd = () => { setEditMaterial(null); setShowModal(true); };
+  const handleEdit = (material) => { setEditMaterial(material); setShowModal(true); };
+  const closeModal = () => { setShowModal(false); setEditMaterial(null); };
 
-  const totalMaterials = materials.length
-  const lowStockCount = materials.filter(m => m.status === "Low Stock").length
-  const suppliersCount = [...new Set(materials.map(m => m.supplier))].length
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this material?")) return;
+    try {
+      await axios.delete(`http://127.0.0.1:8000/api/raw-materials/${id}`);
+      setMaterials(prev => prev.filter(m => m.id !== id));
+    } catch (err) {
+      console.error(err);
+      alert("Error deleting material");
+    }
+  };
 
-  const indexOfLastItem = currentPage * itemsPerPage
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage
-  const currentMaterials = materials.slice(indexOfFirstItem, indexOfLastItem)
-  const totalPages = Math.ceil(materials.length / itemsPerPage)
-  const goToPage = (page) => setCurrentPage(page)
+  const handleSaveMaterial = (material) => {
+    if (editMaterial) {
+      setMaterials(prev => prev.map(m => m.id === editMaterial.id ? material : m));
+    } else {
+      setMaterials(prev => [material, ...prev]); // নতুন material আগে show হবে
+    }
+    closeModal();
+  };
+
+  // Pagination
+  const totalPages = Math.ceil(materials.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentMaterials = materials.slice(indexOfFirstItem, indexOfLastItem);
+  const goToPage = (page) => setCurrentPage(page);
+
+  if (loading) return <p className="p-4">Loading materials...</p>;
+
+  // Summary
+  const totalMaterials = materials.length;
+  const lowStockCount = materials.filter(m => m.status === "Low Stock").length;
+  const suppliersCount = [...new Set(materials.map(m => m.supplier))].length;
 
   return (
     <div>
@@ -43,7 +71,7 @@ export default function Materialmaincontainer() {
         <div className="flex justify-between mb-4">
           <h1 className="text-3xl font-semibold text-gray-900">Raw Material Management</h1>
           <button onClick={handleAdd} className="bg-[#6C5CE7] hover:bg-[#5949D5] text-white font-semibold py-2 px-4 rounded-md flex items-center space-x-2 text-base">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
               <path d="M12 4v16m8-8H4" />
             </svg>
             <span>Add Material</span>
@@ -54,7 +82,7 @@ export default function Materialmaincontainer() {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-          <div className="relative overflow-hidden rounded-lg p-6 flex flex-col justify-between bg-white shadow-md border-l-8 text-gray-800" style={{ borderColor: "#5A4BCF" }}>
+          <div className="relative overflow-hidden rounded-lg p-6 flex flex-col justify-between bg-white shadow-md border-l-8" style={{ borderColor: "#5A4BCF" }}>
             <div className="flex justify-between items-center mb-4">
               <div className="flex flex-col items-start">
                 <p className="text-lg font-medium uppercase mb-1" style={{ color: "#5A4BCF" }}>Total Materials</p>
@@ -63,8 +91,7 @@ export default function Materialmaincontainer() {
               <img src="/asset/box-minimalistic-svgrepo-com.svg" alt="total materials" className="h-12 w-12 opacity-80" />
             </div>
           </div>
-
-          <div className="relative overflow-hidden rounded-lg p-6 flex flex-col justify-between bg-white shadow-md border-l-8 text-gray-800" style={{ borderColor: "#EF4444" }}>
+          <div className="relative overflow-hidden rounded-lg p-6 flex flex-col justify-between bg-white shadow-md border-l-8" style={{ borderColor: "#EF4444" }}>
             <div className="flex justify-between items-center mb-4">
               <div className="flex flex-col items-start">
                 <p className="text-lg font-medium uppercase mb-1" style={{ color: "#EF4444" }}>Low Stock</p>
@@ -73,8 +100,7 @@ export default function Materialmaincontainer() {
               <img src="/asset/alert-filled-svgrepo-com.svg" alt="low stock" className="h-12 w-12 opacity-80" />
             </div>
           </div>
-
-          <div className="relative overflow-hidden rounded-lg p-6 flex flex-col justify-between bg-white shadow-md border-l-8 text-gray-800" style={{ borderColor: "#28A745" }}>
+          <div className="relative overflow-hidden rounded-lg p-6 flex flex-col justify-between bg-white shadow-md border-l-8" style={{ borderColor: "#28A745" }}>
             <div className="flex justify-between items-center mb-4">
               <div className="flex flex-col items-start">
                 <p className="text-lg font-medium uppercase mb-1" style={{ color: "#28A745" }}>Suppliers</p>
@@ -93,30 +119,23 @@ export default function Materialmaincontainer() {
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Material Name</th>
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Stock Quantity</th>
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Min Required</th>
+                <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Unit</th>
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Supplier</th>
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-right text-sm font-medium uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {currentMaterials.map((material, index) => (
+              {currentMaterials.map((material) => (
                 <tr key={material.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-3 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="w-7 h-7 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center mr-3 font-semibold text-sm">
-                        {indexOfFirstItem + index + 1}
-                      </div>
-                      <div>
-                        <p className="text-base font-medium text-gray-900">{material.name}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-3 whitespace-nowrap text-base text-gray-500">{material.stock}</td>
-                  <td className="px-6 py-3 whitespace-nowrap text-base text-gray-500">{material.minRequired}</td>
-                  <td className="px-6 py-3 whitespace-nowrap text-base text-gray-500">{material.supplier}</td>
+                  <td className="px-6 py-3 whitespace-nowrap">{material.material_name}</td>
+                  <td className="px-6 py-3 whitespace-nowrap">{material.quantity}</td>
+                  <td className="px-6 py-3 whitespace-nowrap">{material.min_required}</td>
+                  <td className="px-6 py-3 whitespace-nowrap">{material.unit || '-'}</td>
+                  <td className="px-6 py-3 whitespace-nowrap">{material.supplier || '-'}</td>
                   <td className="px-6 py-3 whitespace-nowrap">
                     <span className={`px-2 py-1 inline-flex text-sm leading-5 font-semibold rounded-full ${material.status === "In Stock" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
-                      {material.status}
+                      {material.status || (material.quantity < material.min_required ? "Low Stock" : "In Stock")}
                     </span>
                   </td>
                   <td className="px-6 py-3 text-right text-base font-medium">
@@ -143,10 +162,10 @@ export default function Materialmaincontainer() {
           ))}
           <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages} className="px-3 py-2 border border-gray-300 rounded-md text-base hover:bg-gray-50 disabled:opacity-50">Next</button>
         </div>
-
       </section>
 
-      {showModal && <Addmaterial closeModal={closeModal} initialData={editMaterial} onSave={handleSaveMaterial} />}
+      {/* Modal */}
+      {showModal && <AddMaterial closeModal={closeModal} initialData={editMaterial} onSave={handleSaveMaterial} />}
     </div>
-  )
+  );
 }

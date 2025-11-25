@@ -1,287 +1,152 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
-
-export default function Addmaterial({ closeModal, initialData = null, onSave }) 
-{
- const [formData, setFormData] = useState({
-  materialName: '',
-  stockQuantity: '',
-  minimumRequired: '',
-  supplier: '',
-  status: ''
-});
-
-useEffect(() => {
-  if (initialData) {
-    setFormData({
-      materialName: initialData.name || '',
-      stockQuantity: initialData.stock || '',
-      minimumRequired: initialData.minRequired || '',
-      supplier: initialData.supplier || '',
-      status: initialData.status || ''
-    });
-  } else {
-    setFormData({
-      materialName: '',
-      stockQuantity: '',
-      minimumRequired: '',
-      supplier: '',
-      status: ''
-    });
-  }
-}, [initialData]);
-
-
+export default function AddMaterial({ closeModal, initialData = null, onSave }) {
+  const [formData, setFormData] = useState({
+    material_name: '',
+    quantity: '',
+    min_required: '',
+    supplier: '',
+    status: '',
+    unit: ''
+  });
 
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
 
-  
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        material_name: initialData.material_name || '',
+        quantity: initialData.quantity || '',
+        min_required: initialData.min_required || '',
+        supplier: initialData.supplier || '',
+        status: initialData.status || '',
+        unit: initialData.unit || ''
+      });
+    }
+  }, [initialData]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
   };
 
   const validateForm = () => {
     const newErrors = {};
-
-    if (!formData.materialName.trim()) {
-      newErrors.materialName = 'Material name is required';
-    }
-
-    if (!formData.stockQuantity) {
-      newErrors.stockQuantity = 'Stock quantity is required';
-    } else if (formData.stockQuantity < 0) {
-      newErrors.stockQuantity = 'Stock quantity must be positive';
-    }
-
-    if (!formData.minimumRequired) {
-      newErrors.minimumRequired = 'Minimum required is required';
-    } else if (formData.minimumRequired < 0) {
-      newErrors.minimumRequired = 'Minimum required must be positive';
-    }
-
-    if (!formData.supplier.trim()) {
-      newErrors.supplier = 'Supplier is required';
-    }
-
-    if (!formData.status) {
-      newErrors.status = 'Status is required';
-    }
-
+    if (!formData.material_name.trim()) newErrors.material_name = 'Material name is required';
+    if (!formData.quantity) newErrors.quantity = 'Stock quantity is required';
+    if (!formData.min_required) newErrors.min_required = 'Minimum required is required';
+    if (!formData.supplier.trim()) newErrors.supplier = 'Supplier is required';
+    if (!formData.status) newErrors.status = 'Status is required';
+    if (!formData.unit.trim()) newErrors.unit = 'Unit is required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
 
-  if (validateForm()) {
-    // Send data to parent
-    onSave({
-      name: formData.materialName,
-      stock: Number(formData.stockQuantity),
-      minRequired: Number(formData.minimumRequired),
-      supplier: formData.supplier,
-      status: formData.status
-    });
+    try {
+      setLoading(true);
+      const payload = {
+        ...formData,
+        quantity: Number(formData.quantity),
+        min_required: Number(formData.min_required)
+      };
 
-    // Reset form
-    setFormData({
-      materialName: '',
-      stockQuantity: '',
-      minimumRequired: '',
-      supplier: '',
-      status: ''
-    });
+      let response;
+      if (initialData) {
+        response = await axios.put(`http://127.0.0.1:8000/api/raw-materials/${initialData.id}`, payload);
+      } else {
+        response = await axios.post('http://127.0.0.1:8000/api/raw-materials', payload);
+      }
 
-    // Close modal
-    closeModal();
-  }
-};
-
-
-  const handleOverlayClick = (e) => {
-    if (e.target === e.currentTarget) {
+      onSave(response.data.material); // Important: send material object directly
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || "Error saving material");
+    } finally {
+      setLoading(false);
       closeModal();
     }
   };
 
-
+  const handleOverlayClick = (e) => {
+    if (e.target === e.currentTarget) closeModal();
+  };
 
   return (
-    <div>
-      {/* Modal Overlay */}
-      <div 
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-        onClick={handleOverlayClick}
-      >
-        {/* Modal Container */}
-        <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-          
-          {/* Modal Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">
-          {initialData ? 'Edit Material' : 'Add New Material'}
-        </h2>
-            <button 
-              onClick={closeModal}
-              className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-              </svg>
-            </button>
-          </div>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={handleOverlayClick}>
+      <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900">{initialData ? 'Edit Material' : 'Add New Material'}</h2>
+          <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-full">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
 
-          {/* Modal Body - Form */}
-          <div className="p-6">
-            <form 
-              className="space-y-4" 
-              onSubmit={handleSubmit}
-            >
-              
-              {/* Material Name */}
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">
-                  Material Name <span className="text-red-500">*</span>
+        <div className="p-6 pb-0">
+          <form id="material-form" className="space-y-5" onSubmit={handleSubmit}>
+            {["material_name","quantity","min_required","supplier","unit"].map(field => (
+              <div key={field} className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {field.replace("_"," ").replace(/\b\w/g, l => l.toUpperCase())} <span className="text-red-500">*</span>
                 </label>
-                <input 
-                  type="text" 
-                  name="materialName"
-                  value={formData.materialName}
+                <input
+                  type={field === "quantity" || field === "min_required" ? "number" : "text"}
+                  name={field}
+                  value={formData[field]}
                   onChange={handleInputChange}
-                  placeholder="Enter material name" 
-                  required
-                  className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                    errors.materialName ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                  }`}
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base ${errors[field] ? 'border-red-500 bg-red-50' : ''}`}
                 />
-                {errors.materialName && (
-                  <p className="text-red-500 text-sm mt-1">{errors.materialName}</p>
-                )}
+                {errors[field] && <p className="text-red-500 text-xs mt-1">{errors[field]}</p>}
               </div>
+            ))}
 
-              {/* Stock Quantity */}
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">
-                  Stock Quantity <span className="text-red-500">*</span>
-                </label>
-                <input 
-                  type="number" 
-                  name="stockQuantity"
-                  value={formData.stockQuantity}
-                  onChange={handleInputChange}
-                  placeholder="Enter stock quantity" 
-                  min="0"
-                  required
-                  className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                    errors.stockQuantity ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                  }`}
-                />
-                {errors.stockQuantity && (
-                  <p className="text-red-500 text-sm mt-1">{errors.stockQuantity}</p>
-                )}
-              </div>
+            {/* Status */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base ${errors.status ? 'border-red-500 bg-red-50' : ''}`}
+                required
+              >
+                <option value="">Select Status</option>
+                <option value="Low Stock">Low Stock</option>
+                <option value="In Stock">In Stock</option>
+              </select>
+              {errors.status && <p className="text-red-500 text-xs mt-1">{errors.status}</p>}
+            </div>
+          </form>
+        </div>
 
-              {/* Minimum Required */}
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">
-                  Minimum Required <span className="text-red-500">*</span>
-                </label>
-                <input 
-                  type="number" 
-                  name="minimumRequired"
-                  value={formData.minimumRequired}
-                  onChange={handleInputChange}
-                  placeholder="Enter minimum required quantity" 
-                  min="0"
-                  required
-                  className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                    errors.minimumRequired ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                  }`}
-                />
-                {errors.minimumRequired && (
-                  <p className="text-red-500 text-sm mt-1">{errors.minimumRequired}</p>
-                )}
-              </div>
-
-              {/* Supplier */}
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">
-                  Supplier <span className="text-red-500">*</span>
-                </label>
-                <input 
-                  type="text" 
-                  name="supplier"
-                  value={formData.supplier}
-                  onChange={handleInputChange}
-                  placeholder="Enter supplier name" 
-                  required
-                  className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                    errors.supplier ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                  }`}
-                />
-                {errors.supplier && (
-                  <p className="text-red-500 text-sm mt-1">{errors.supplier}</p>
-                )}
-              </div>
-
-              {/* Status */}
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">
-                  Status <span className="text-red-500">*</span>
-                </label>
-                <select 
-                  name="status"
-                  value={formData.status}
-                  onChange={handleInputChange}
-                  required
-                  className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                    errors.status ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                  }`}
-                >
-                  <option value="">Select Status</option>
-                  <option value="Low">Low</option>
-                  <option value="Medium">Medium</option>
-                  <option value="High">High</option>
-                </select>
-                {errors.status && (
-                  <p className="text-red-500 text-sm mt-1">{errors.status}</p>
-                )}
-              </div>
-
-              {/* Modal Footer - Action Buttons */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 mt-6">
-                <button 
-                  type="button"
-                  onClick={closeModal}
-                  className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  Cancel
-                </button>
-                {/* submit  */}
-                <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                   {initialData ? 'Update Material' : 'Add Material'}
-               </button>
-
-
-              </div>
-            </form>
-          </div>
+        <div className="sticky bottom-0 left-0 bg-white px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={closeModal}
+            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="material-form"
+            disabled={loading}
+            className="px-4 py-2 bg-[#6C5CE7] text-white rounded-md hover:bg-[#5949D5]"
+          >
+            {initialData ? 'Update Material' : 'Add Material'}
+          </button>
         </div>
       </div>
     </div>
-  )
+  );
 }

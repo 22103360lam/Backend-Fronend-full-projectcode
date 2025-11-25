@@ -82,7 +82,7 @@ export default function Inventorycontainer() {
                 <p className="text-lg font-medium text-[#28A745] uppercase mb-1">In Stock</p>
                 <p className="text-4xl font-bold">{inStock}</p>
               </div>
-              <img src="/asset/check-mark-svgrepo-com.svg" alt="in stock" className="h-10 w-10 ml-4 opacity-70" />
+              <img src="/asset/instock (2).png" alt="in stock" className="h-10 w-10 ml-4 opacity-70" />
             </div>
           </div>
 

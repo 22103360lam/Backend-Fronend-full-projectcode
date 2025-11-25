@@ -1,29 +1,66 @@
-import React from 'react'
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function Mheader() {
+  const [showDropdown, setShowDropdown] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    // Optional: clear session storage, local storage, or cookies here
+    // localStorage.clear();
+    navigate('/'); // redirect to login page
+  };
+
   return (
     <div>
-      {/* Header - Full width of main container */}
-      <header className="flex items-center justify-end px-4 md:px-6 py-3.5 bg-[#ffffff]">
+      <header className="flex items-center justify-end px-4 md:px-6 py-3.5 bg-[#ffffff] relative">
         {/* User and Notifications */}
         <div className="flex items-center space-x-4 md:space-x-6">
-          <button className="text-[#ffffff] hover:text-gray-800 relative">
-            <img src="/asset/notification-svgrepo-com.svg" alt="Bell Icon" className="h-6 w-6 md:h-8 md:w-8"/>
+
+          {/* Notification Button */}
+          <button className="relative hover:text-gray-800">
+            <img
+              src="asset/notification-svgrepo-com.svg"
+              alt="Bell Icon"
+              className="h-6 w-6 md:h-8 md:w-8"
+            />
             <span className="absolute -top-1 -right-1 flex h-3 w-3">
               <span className="absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600 items-center justify-center text-white text-[9px]">1</span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600 text-white text-[9px] items-center justify-center">
+                1
+              </span>
             </span>
           </button>
 
-          <button className="flex items-center space-x-2">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-[#6C5CE7] text-white flex items-center justify-center font-semibold text-sm">MGR</div>
-            <div className="hidden sm:block">
-              <div className="text-sm font-semibold text-gray-800">Manager User</div>
-              <div className="text-sm font-semibold text-gray-800">Manager</div>
-            </div>
-          </button>
+          {/* User Profile Button */}
+          <div className="relative">
+            <button
+              onClick={() => setShowDropdown(!showDropdown)}
+              className="flex items-center space-x-2"
+            >
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-[#6C5CE7] text-white flex items-center justify-center font-semibold text-sm">
+                AD
+              </div>
+              <div className="hidden sm:block">
+                <div className="text-sm font-semibold text-gray-800">Manager User</div>
+                
+              </div>
+            </button>
+
+            {/* Dropdown Menu */}
+            {showDropdown && (
+              <div className="absolute right-0 mt-2 w-32 bg-white border rounded shadow-md z-50">
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
     </div>
-  )
+  );
 }
