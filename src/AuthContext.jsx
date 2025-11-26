@@ -1,44 +1,57 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
-//  Create Context
+// Create Context
 const AuthContext = createContext();
 
-//  Hook for easy usage
+// Hook
 export const useAuth = () => useContext(AuthContext);
 
-//  AuthProvider
 export default function AuthProvider({ children }) {
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem("token") || null);
   const [expiry, setExpiry] = useState(localStorage.getItem("token_expiry") || null);
+    const [status, setStatus] = useState("Inactive"); //  add status state
 
-  // Load user data if token exists
+  // On mount, load user from localStorage
   useEffect(() => {
-    if (token) {
-      fetchUser();
-      setupAutoLogout();
-    }
-  }, [token, expiry]);
+    const storedUser = localStorage.getItem("user");
+    const storedToken = localStorage.getItem("token");
+    const storedExpiry = localStorage.getItem("token_expiry");
 
-  // Fetch user from backend
-  const fetchUser = async () => {
+    if (storedUser && storedToken) {
+      setUser(JSON.parse(storedUser));
+      setToken(storedToken);
+      setExpiry(storedExpiry);
+       setStatus("Active"); // set status on load
+      setupAutoLogout(storedExpiry);
+      fetchUser(storedToken);
+    }
+  }, []);
+
+  // Fetch user data from backend
+  const fetchUser = async (authToken) => {
     try {
       const res = await axios.get("http://127.0.0.1:8000/api/user", {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${authToken}` },
       });
       setUser(res.data);
+      localStorage.setItem("user", JSON.stringify(res.data));
     } catch (error) {
       console.error("Fetch user error:", error);
-      logout(); // invalid token → logout
+      logout();
     }
   };
 
   // Login function
-  const login = (token, userData, expiresAt) => {
-    setToken(token);
+  const login = (authToken, userData, expiresAt) => {
+    setToken(authToken);
     setUser(userData);
-    localStorage.setItem("token", token);
+    setStatus("Active");  //  login → active
+    localStorage.setItem("token", authToken);
+    localStorage.setItem("user", JSON.stringify(userData));
 
     if (expiresAt) {
       setExpiry(expiresAt);
@@ -51,48 +64,33 @@ export default function AuthProvider({ children }) {
   const logout = () => {
     setToken(null);
     setUser(null);
+    setStatus("Inactive"); // logout → inactive
     setExpiry(null);
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     localStorage.removeItem("token_expiry");
+    navigate("/"); // redirect to login page
   };
 
-  // Auto logout setup
+  // Auto logout
   const setupAutoLogout = (expiryTime) => {
-    const expiryDate = expiryTime ? new Date(expiryTime) : new Date(expiry);
+    const expiryDate = expiryTime ? new Date(expiryTime) : null;
+    if (!expiryDate) return;
+
     const timeout = expiryDate - new Date();
-
-    if (timeout > 0) {
-      setTimeout(() => {
-        logout();
-        alert("Session expired. Please login again.");
-
-          // Auto logout setup
-  const setupAutoLogout = (expiryTime) => {
-    const expiryDate = expiryTime ? new Date(expiryTime) : new Date(expiry);
-    const timeout = expiryDate - new Date();
-
-    if (timeout > 0) {
-      setTimeout(() => {
-        logout(); // already expired
-        alert("Session expired. Please login again.");
-      }, timeout);
-    } else {
-      logout();// already expired
-       navigate("/"); // redirect to login 
+    if (timeout <= 0) {
+      logout(); // already expired
+      return;
     }
+
+    setTimeout(() => {
+      alert("Session expired. Please login again.");
+      logout();
+    }, timeout);
   };
 
-      }, timeout);
-    } else {
-      logout();// already expired
-       navigate("/"); // redirect to login 
-    }
-  };
-  
-
-  // Provide context
   return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>
+    <AuthContext.Provider value={{ user, token, status,login, logout }}>
       {children}
     </AuthContext.Provider>
   );

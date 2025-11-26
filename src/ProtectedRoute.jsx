@@ -2,11 +2,16 @@ import React from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 
-export default function ProtectedRoute({ children, role }) {
-  const { token, user } = useAuth();
+const ProtectedRoute = ({ role, children }) => {
+  const { user, status } = useAuth();
 
-  if (!token) return <Navigate to="/" replace />; // Not logged in
-  if (role && user.role !== role) return <Navigate to="/" replace />; // Wrong role
+  // Only redirect if user is not loaded and status inactive
+  if (!user && status !== "Active") return <Navigate to="/" />; 
+
+  // If role is required, check role
+  if (role && user?.role !== role) return <Navigate to="/" />; 
 
   return children;
-}
+};
+
+export default ProtectedRoute;

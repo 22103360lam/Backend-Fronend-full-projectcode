@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import UserManageContainer from "../Adminpages/Usermanagecontainer.jsx";
+import { useAuth } from "../../AuthContext"; // import useAuth
 
 export default function UserMainContainer() {
+  const { user: loggedInUser, status: loggedInUserStatus } = useAuth(); // get current user and status
   const [showModal, setShowModal] = useState(false);
   const [editUser, setEditUser] = useState(null);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   // Fetch users from backend
   useEffect(() => {
@@ -19,7 +23,7 @@ export default function UserMainContainer() {
           emailOrPhone: u.email || u.phone || "-",
           role: u.role,
           department: u.department || "-",
-          status: "Active",
+          status: loggedInUser && loggedInUser.id === u.id ? loggedInUserStatus : "Inactive", // use context status
           lastActive: "Just now",
           password: "********" // hide password
         }));
@@ -32,7 +36,7 @@ export default function UserMainContainer() {
       }
     };
     fetchUsers();
-  }, []);
+  }, [loggedInUser, loggedInUserStatus]); // add status as dependency
 
   const openModal = (user = null) => {
     setEditUser(user);
@@ -65,9 +69,13 @@ export default function UserMainContainer() {
     }
   };
 
+  const indexOfLastUser = currentPage * itemsPerPage;
+  const indexOfFirstUser = indexOfLastUser - itemsPerPage;
+  const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
+  const totalPages = Math.ceil(users.length / itemsPerPage);
+
   if (loading) return <p>Loading users...</p>;
 
-  // Summary counts
   const totalUsers = users.length;
   const totalAdmins = users.filter(u => u.role === "Admin").length;
   const departmentsCount = [...new Set(users.map(u => u.department))].length;
@@ -127,11 +135,12 @@ export default function UserMainContainer() {
               <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Role</th>
               <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Department</th>
               <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Password</th>
+              <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Status</th>
               <th className="px-6 py-3 text-right text-sm font-medium uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {users.map((user) => (
+            {currentUsers.map((user) => (
               <tr key={user.id} className="hover:bg-gray-50">
                 <td className="px-6 py-3 whitespace-nowrap">
                   <p className="text-base font-medium text-gray-900">{user.fullName}</p>
@@ -140,6 +149,14 @@ export default function UserMainContainer() {
                 <td className="px-6 py-3 text-gray-500">{user.role}</td>
                 <td className="px-6 py-3 text-gray-500">{user.department || '-'}</td>
                 <td className="px-6 py-3 text-gray-500">{user.password}</td>
+                <td className="px-6 py-3">
+                  <span
+                    className={`px-3 py-1 rounded-full text-sm font-semibold
+                      ${user.status === "Active" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+                  >
+                    {user.status}
+                  </span>
+                </td>
                 <td className="px-6 py-3 whitespace-nowrap text-right">
                   <button onClick={() => openModal(user)} className="p-1 rounded-full hover:bg-blue-50 mr-2">
                     <img src="asset/edit.png" className="w-4 h-4" alt="Edit" />
@@ -150,8 +167,40 @@ export default function UserMainContainer() {
                 </td>
               </tr>
             ))}
+            {currentUsers.length === 0 && (
+              <tr>
+                <td colSpan={6} className="text-center py-6 text-gray-400">No users found.</td>
+              </tr>
+            )}
           </tbody>
         </table>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex justify-end items-center mt-6 gap-2">
+        <button
+          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          disabled={currentPage === 1}
+          className={`px-3 py-1 rounded ${currentPage === 1 ? "bg-gray-200 text-gray-400 cursor-not-allowed" : "bg-gray-100 hover:bg-gray-200"}`}
+        >
+          Previous
+        </button>
+        {Array.from({ length: totalPages }, (_, i) => (
+          <button
+            key={i + 1}
+            onClick={() => setCurrentPage(i + 1)}
+            className={`px-3 py-1 rounded ${currentPage === i + 1 ? "bg-[#6C5CE7] text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-700"}`}
+          >
+            {i + 1}
+          </button>
+        ))}
+        <button
+          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+          disabled={currentPage === totalPages}
+          className={`px-3 py-1 rounded ${currentPage === totalPages ? "bg-gray-200 text-gray-400 cursor-not-allowed" : "bg-gray-100 hover:bg-gray-200"}`}
+        >
+          Next
+        </button>
       </div>
 
       {/* Modal */}

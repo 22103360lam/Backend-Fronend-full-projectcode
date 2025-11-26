@@ -7,15 +7,30 @@ use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
-    // List all users
+    // Show one user (without exposing password)
+    public function show($id)
+    {
+        $user = User::select('id', 'name', 'email', 'phone', 'role', 'department')
+                    ->find($id);
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        return response()->json($user);
+    }
+
+    // List all users (clean and safe)
     public function index()
     {
-        return response()->json(User::all());
+        return response()->json(
+            User::select('id', 'name', 'email', 'phone', 'role', 'department')->get()
+        );
     }
 
     // Create new user
     public function store(Request $request)
-    {
+    {  
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'nullable|email|unique:users,email',

@@ -9,7 +9,7 @@ class RawMaterial extends Model
 {
     use HasFactory;
 
-    protected $table = 'raw_materials'; // table name
+    protected $table = 'raw_materials';
 
     protected $fillable = [
         'material_name',
@@ -19,4 +19,17 @@ class RawMaterial extends Model
         'status',
         'unit',
     ];
+
+    // Relationship with Production
+    public function productions()
+    {
+        return $this->hasMany(Production::class, 'material_id');
+    }
+
+    // IMPORTANT FIX 
+    // Map "material_name" → "name" for frontend compatibility
+    public function getNameAttribute()
+    {
+        return $this->material_name;
+    }
 }
