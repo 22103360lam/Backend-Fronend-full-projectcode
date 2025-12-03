@@ -17,7 +17,7 @@ export default function Productioncontainer() {
     status: 'On Track',
     dueDate: ''
   });
-  const [materialForm, setMaterialForm] = useState({ batch: '', material: '', quantity: '' });
+  const [materialForm, setMaterialForm] = useState({ batch: '', material: '', quantity: '', unit: '' });
   const [editTask, setEditTask] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -34,15 +34,12 @@ export default function Productioncontainer() {
   const fetchMaterials = async () => {
     try {
       const res = await axios.get('http://127.0.0.1:8000/api/raw-materials');
-      // API returns { id, material_name }
       setMaterials(Array.isArray(res.data) ? res.data : []);
       console.log('raw-materials response', res.data);
     } catch (err) {
       console.error('Failed to load materials', err);
     }
   };
-
-  //fetch data function
 
   const fetchData = async () => {
     try {
@@ -54,23 +51,23 @@ export default function Productioncontainer() {
       setUsers(userRes.data || []);
 
       const prods = (prodRes.data || []).map(p => ({
-  id: p.id,                      
-  batch: p.batch_id,             
-  task: p.task || '',
-  quantity: p.quantity?.toString() || '',
-  material: p.material_id ? p.material_id.toString() : '',
-  materialName: p.material_name ?? p.materialItem?.material_name ?? '', // <-- use p.material_name
-  materialQuantity: p.material_quantity?.toString() || '',
-  assigned_user_id: p.assigned_user_id || '',
-  assigned_to: p.assigned_to || '', 
-  assignDate: p.assign_date || '',
-  status: p.status || 'On Track',
-  dueDate: p.due_date || ''
-}));
+        id: p.id,                      
+        batch: p.batch_id,             
+        task: p.task || '',
+        quantity: p.quantity?.toString() || '',
+        material: p.material_id ? p.material_id.toString() : '',
+        materialName: p.material_name ?? p.materialItem?.material_name ?? '',
+        materialQuantity: p.material_quantity?.toString() || '',
+        unit: p.unit || '',  // <-- added unit
+        assigned_user_id: p.assigned_user_id || '',
+        assigned_to: p.assigned_to || '', 
+        assignDate: p.assign_date || '',
+        status: p.status || 'On Track',
+        dueDate: p.due_date || ''
+      }));
 
       setTasks(prods);
 
-      // batches should use the batch identifier (batch_id) as 'id' so selects pass the correct value
       const uniqueBatches = prods.map(p => ({ id: p.batch, name: p.batch, date: p.assignDate }));
       setBatches(uniqueBatches);
     } catch (err) {
@@ -101,7 +98,6 @@ export default function Productioncontainer() {
         assign_date: batchForm.date
       });
 
-      // backend returns production with batch_id; push batch identifier
       setBatches(prev => [...prev, { id: res.data.batch_id, name: res.data.batch_id, date: res.data.assign_date }]);
       setTasks(prev => [...prev, {
         id: res.data.id,
@@ -111,6 +107,7 @@ export default function Productioncontainer() {
         material: res.data.material_id ? res.data.material_id.toString() : '',
         materialName: res.data.material ?? '',
         materialQuantity: res.data.material_quantity?.toString() || '',
+        unit: res.data.unit || '',  // <-- added unit
         assigned_user_id: res.data.assigned_user_id || '',
         assigned_to: res.data.assigned_to || '',
         assignDate: res.data.assign_date,
@@ -125,84 +122,80 @@ export default function Productioncontainer() {
     }
   };
 
-const handleTaskSubmit = async (e) => {
-  e.preventDefault();
-  if (!taskForm.batch) return alert('Please select a batch');
+  const handleTaskSubmit = async (e) => {
+    e.preventDefault();
+    if (!taskForm.batch) return alert('Please select a batch');
 
-  try {
-    // note: taskForm.batch is batch identifier (batch_id string)
-    const res = await axios.put(
-      `http://127.0.0.1:8000/api/productions/${encodeURIComponent(taskForm.batch)}/task`,
-      {
-        task: taskForm.task,
-        quantity: taskForm.quantity,
-        assigned_user_id: taskForm.assigned_user_id || null,
-        assigned_to: taskForm.assigned_to || '',
-        status: taskForm.status,
-        due_date: taskForm.dueDate || null
-      }
-    );
+    try {
+      const res = await axios.put(
+        `http://127.0.0.1:8000/api/productions/${encodeURIComponent(taskForm.batch)}/task`,
+        {
+          task: taskForm.task,
+          quantity: taskForm.quantity,
+          assigned_user_id: taskForm.assigned_user_id || null,
+          assigned_to: taskForm.assigned_to || '',
+          status: taskForm.status,
+          due_date: taskForm.dueDate || null
+        }
+      );
 
-    setTasks(prev =>
-      prev.map(t =>
-        t.id === res.data.id
-          ? {
-              ...t,
-              task: res.data.task,
-              quantity: res.data.quantity?.toString() || '',
-              // force assigned_user_id to string for consistent mapping
-              assigned_user_id: res.data.assigned_user_id?.toString() || '',
-              assigned_to: res.data.assigned_to || '',
-              status: res.data.status,
-              dueDate: res.data.due_date
-            }
-          : t
-      )
-    );
+      setTasks(prev =>
+        prev.map(t =>
+          t.id === res.data.id
+            ? {
+                ...t,
+                task: res.data.task,
+                quantity: res.data.quantity?.toString() || '',
+                assigned_user_id: res.data.assigned_user_id?.toString() || '',
+                assigned_to: res.data.assigned_to || '',
+                status: res.data.status,
+                dueDate: res.data.due_date
+              }
+            : t
+        )
+      );
 
-    // reset form
-    setTaskForm({ batch: '', task: '', quantity: '', assigned_user_id: '', assigned_to: '',status: 'On Track', dueDate: '' });
-    setEditTask(null);
-  } catch (err) {
-    console.error(err);
-    alert('Failed to assign task');
-  }
-};
-
+      setTaskForm({ batch: '', task: '', quantity: '', assigned_user_id: '', assigned_to: '',status: 'On Track', dueDate: '' });
+      setEditTask(null);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to assign task');
+    }
+  };
 
   const handleMaterialSubmit = async (e) => {
-  e.preventDefault();
-  if (!materialForm.batch) return alert('Please select a batch');
+    e.preventDefault();
+    if (!materialForm.batch) return alert('Please select a batch');
 
-  try {
-    const selectedMaterial = materials.find(m => m.id.toString() === materialForm.material.toString());
+    try {
+      const selectedMaterial = materials.find(m => m.id.toString() === materialForm.material.toString());
 
-    const res = await axios.put(`http://127.0.0.1:8000/api/productions/${encodeURIComponent(materialForm.batch)}/material`, {
-      material_id: materialForm.material,
-      material_name: selectedMaterial?.material_name || '', // snake_case key
-      material_quantity: materialForm.quantity
-    });
+      const res = await axios.put(`http://127.0.0.1:8000/api/productions/${encodeURIComponent(materialForm.batch)}/material`, {
+        material_id: materialForm.material,
+        material_name: selectedMaterial?.material_name || '',
+        material_quantity: materialForm.quantity,
+        unit: materialForm.unit // <-- send unit
+      });
 
-    setTasks(prev => prev.map(t => t.id === res.data.id ? {
-      ...t,
-      material: res.data.material_id ? res.data.material_id.toString() : '',
-      materialName: res.data.material_name || '-',   // UI update
-      materialQuantity: res.data.material_quantity?.toString() || ''
-    } : t));
+      setTasks(prev => prev.map(t => t.id === res.data.id ? {
+        ...t,
+        material: res.data.material_id ? res.data.material_id.toString() : '',
+        materialName: res.data.material_name || '-',
+        materialQuantity: res.data.material_quantity?.toString() || '',
+        unit: res.data.unit || '' // <-- update unit
+      } : t));
 
-    setMaterialForm({ batch: '', material: '', quantity: '' });
-  } catch (err) {
-    console.error(err);
-    alert('Failed to assign material');
-  }
-};
-
-
+      setMaterialForm({ batch: '', material: '', quantity: '', unit: '' });
+    } catch (err) {
+      console.error(err);
+      alert('Failed to assign material');
+    }
+  };
 
   const handleEditTask = (task) => {
     setEditTask(task);
     setTaskForm({
-      batch: task.batch,         // pass batch identifier (batch_id string)
+      batch: task.batch,
       task: task.task,
       quantity: task.quantity,
       assigned_user_id: task.assigned_user_id,
@@ -211,9 +204,10 @@ const handleTaskSubmit = async (e) => {
       dueDate: task.dueDate
     });
     setMaterialForm({
-      batch: task.batch,         // batch identifier
+      batch: task.batch,
       material: task.material,
-      quantity: task.materialQuantity
+      quantity: task.materialQuantity,
+      unit: task.unit || ''  // <-- populate unit for editing
     });
   };
 
@@ -229,7 +223,7 @@ const handleTaskSubmit = async (e) => {
     }
   };
 
-  const buttonClass = "bg-[#6C5CE7] hover:bg-[#5949D5] text-white px-4 py-1 rounded-md font-semibold transition-colors";
+  const buttonClass = "bg-[#6C5CE7] hover:bg-[#5949D5] text-white px-4 py-2 rounded-md font-semibold transition-colors h-[38px]";
 
   if (loading) return <p className="p-4">Loading...</p>;
 
@@ -240,28 +234,114 @@ const handleTaskSubmit = async (e) => {
       {/* Create Batch */}
       <div className="space-y-2">
         <h2 className="text-lg font-semibold text-[#000000]">Create Batch</h2>
-        <form className="flex flex-col md:flex-row gap-2" onSubmit={handleBatchSubmit}>
-          <input type="text" placeholder="Batch Name or ID" className="flex-1 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]" value={batchForm.batchName} onChange={e => setBatchForm({ ...batchForm, batchName: e.target.value })} required />
-          <input type="date" className="px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]" value={batchForm.date} onChange={e => setBatchForm({ ...batchForm, date: e.target.value })} required />
-          <button type="submit" className={buttonClass}>Create</button>
+        <form className="flex flex-col md:flex-row gap-2 items-end" onSubmit={handleBatchSubmit}>
+          <div className="flex flex-col gap-1 flex-1">
+            <label htmlFor="batchName">Batch Name</label>
+            <input
+              id="batchName"
+              type="text"
+              placeholder="Batch Name or ID"
+              className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]"
+              value={batchForm.batchName}
+              onChange={e => setBatchForm({ ...batchForm, batchName: e.target.value })}
+              required
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="">Assign Task Date</label>
+            <input
+              type="date"
+              className="px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]"
+              value={batchForm.date}
+              onChange={e => setBatchForm({ ...batchForm, date: e.target.value })}
+              required
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <button type="submit" className={buttonClass}>Create</button>
+          </div>
         </form>
       </div>
 
       {/* Assign Tasks */}
       <div className="space-y-2">
         <h2 className="text-lg font-semibold text-[#000000]">Assign Tasks</h2>
-        <form className="flex flex-col md:flex-row gap-2" onSubmit={handleTaskSubmit}>
-          <select className="flex-1 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]" value={taskForm.batch} onChange={e => setTaskForm({ ...taskForm, batch: e.target.value })} required>
-            <option value="">Select Batch</option>
-            {batches.map(batch => <option key={batch.id + batch.date} value={batch.id}>{batch.name}</option>)}
-          </select>
-          <input type="text" placeholder="Task" className="flex-1 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]" value={taskForm.task} onChange={e => setTaskForm({ ...taskForm, task: e.target.value })} required />
-          <input type="text" placeholder="Quantity" className="flex-1 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]" value={taskForm.quantity} onChange={e => setTaskForm({ ...taskForm, quantity: e.target.value })} required />
-          <select className="flex-1 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]" value={taskForm.assigned_user_id} onChange={e => setTaskForm({ ...taskForm, assigned_user_id: e.target.value })}>
-            <option value="">Select User</option>
-            {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-          </select>
-          <input type="date" className="flex-1 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]" value={taskForm.dueDate} onChange={e => setTaskForm({ ...taskForm, dueDate: e.target.value })} />
+        <form className="flex flex-col md:flex-row gap-2 items-end w-full" onSubmit={handleTaskSubmit}>
+          {/* Batch */}
+          <div className="flex flex-col gap-1 flex-1">
+            <label htmlFor="batchSelect">Select Batch</label>
+            <select
+              className="flex-1 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]"
+              value={taskForm.batch}
+              onChange={e => setTaskForm({ ...taskForm, batch: e.target.value })}
+              required
+            >
+              <option value="">Select Batch</option>
+              {batches.map(batch => <option key={batch.id + batch.date} value={batch.id}>{batch.name}</option>)}
+            </select>
+          </div>
+
+          {/* Task Name */}
+          <div className="flex flex-col gap-1 flex-1">
+            <label htmlFor="taskInput">Task Name</label>
+            <select
+              id="taskInput"
+              value={taskForm.task}
+              onChange={e => setTaskForm({ ...taskForm, task: e.target.value })}
+              required
+              className="flex-1 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7] bg-white"
+            >
+              <option value="">Select Task</option>
+              <option value="Cutting">Cutting</option>
+              <option value="Shirt">Shirt</option>
+              <option value="Pant">Pant</option>
+              <option value="T-shirt">T-shirt</option>
+              <option value="Jersey">Jersey</option>
+              <option value="Quality Check">Quality Check</option>
+              <option value="Fabric Inspection">Fabric Inspection</option>
+              <option value="Packing &amp; Folding">Packing &amp; Folding</option>
+              <option value="Material Receiving">Material Receiving</option>
+              <option value="Packing">Packing</option>
+            </select>
+          </div>
+
+          {/* Task Quantity */}
+          <div className="flex flex-col gap-1 flex-1">
+            <label htmlFor="taskInput">Task Quantity </label>
+            <input
+              type="text"
+              placeholder="Quantity"
+              className="flex-1 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]"
+              value={taskForm.quantity}
+              onChange={e => setTaskForm({ ...taskForm, quantity: e.target.value })}
+              required
+            />
+          </div>
+
+          {/* Assign User */}
+          <div className="flex flex-col gap-1 flex-1">
+            <label htmlFor="taskInput">Assign To </label>
+            <select
+              className="flex-1 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]}"
+              value={taskForm.assigned_user_id}
+              onChange={e => setTaskForm({ ...taskForm, assigned_user_id: e.target.value })}
+            >
+              <option value="">Select User</option>
+              {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+          </div>
+
+          {/* Due Date */}
+          <div className="flex flex-col gap-1 flex-1">
+            <label htmlFor="taskInput">Due Date </label>
+            <input
+              type="date"
+              className="flex-1 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]"
+              value={taskForm.dueDate}
+              onChange={e => setTaskForm({ ...taskForm, dueDate: e.target.value })}
+            />
+          </div>
+
           <button type="submit" className={buttonClass}>{editTask ? 'Update' : 'Assign'}</button>
         </form>
       </div>
@@ -269,16 +349,68 @@ const handleTaskSubmit = async (e) => {
       {/* Assign Material */}
       <div className="space-y-2">
         <h2 className="text-lg font-semibold text-[#000000]">Assign Material</h2>
-        <form className="flex flex-col md:flex-row gap-2" onSubmit={handleMaterialSubmit}>
-          <select className="flex-1 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]" value={materialForm.batch} onChange={e => setMaterialForm({ ...materialForm, batch: e.target.value })} required>
-            <option value="">Select Batch</option>
-            {batches.map(batch => <option key={batch.id + batch.date} value={batch.id}>{batch.name}</option>)}
-          </select>
-          <select className="flex-1 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]" value={materialForm.material} onChange={e => setMaterialForm({ ...materialForm, material: e.target.value })} required>
-            <option value="">Select Material</option>
-            {materials.map(m => <option key={m.id} value={m.id}>{m.material_name}</option>)}
-          </select>
-          <input type="text" placeholder="Quantity" className="px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]" value={materialForm.quantity} onChange={e => setMaterialForm({ ...materialForm, quantity: e.target.value })} required />
+        <form className="flex flex-col md:flex-row gap-2 items-end w-full" onSubmit={handleMaterialSubmit}>
+          {/* Batch */}
+          <div className="flex flex-col gap-1 flex-1">
+            <label>Select Batch </label>
+            <select
+              className="flex-1 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]"
+              value={materialForm.batch}
+              onChange={e => setMaterialForm({ ...materialForm, batch: e.target.value })}
+              required
+            >
+              <option value="">Select Batch</option>
+              {batches.map(batch => <option key={batch.id + batch.date} value={batch.id}>{batch.name}</option>)}
+            </select>
+          </div>
+
+          {/* Material */}
+          <div className="flex flex-col gap-1 flex-1">
+            <label>Select Material </label>
+            <select
+              className="flex-1 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]"
+              value={materialForm.material}
+              onChange={e => setMaterialForm({ ...materialForm, material: e.target.value })}
+              required
+            >
+              <option value="">Assign Material</option>
+              {materials.map(m => <option key={m.id} value={m.id}>{m.material_name}</option>)}
+            </select>
+          </div>
+
+          {/* Quantity */}
+          <div className="flex flex-col gap-1 flex-1">
+            <label>Assign Quantity </label>
+            <input
+              type="text"
+              placeholder="Quantity"
+              className="px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]"
+              value={materialForm.quantity}
+              onChange={e => setMaterialForm({ ...materialForm, quantity: e.target.value })}
+              required
+            />
+          </div>
+
+          {/* Unit */}
+          <div className="flex flex-col gap-1 flex-1">
+            <label>Unit</label>
+            <select
+              name="unit"
+              value={materialForm.unit}
+              onChange={e => setMaterialForm({ ...materialForm, unit: e.target.value })}
+              className="px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7] bg-white"
+              required
+            >
+              <option value="">Select Unit</option>
+              <option value="Kg">Kg</option>
+              <option value="Yard">Yard</option>
+              <option value="Meter">Meter</option>
+              <option value="Gross">Gross</option>
+              <option value="Dozen">Dozen</option>
+              <option value="Piece">Piece</option>
+            </select>
+          </div>
+
           <button type="submit" className={buttonClass}>Assign</button>
         </form>
       </div>
@@ -286,7 +418,7 @@ const handleTaskSubmit = async (e) => {
       {/* Track Progress Table */}
       <div className="space-y-2">
         <h2 className="text-lg font-semibold text-[#000000]">Track Progress</h2>
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white rounded-lg shadow overflow-auto">
           <table className="w-full text-sm">
             <thead className="text-white" style={{ background: 'linear-gradient(135deg, #8E7DFF, #6C5CE7)' }}>
               <tr>
@@ -295,6 +427,7 @@ const handleTaskSubmit = async (e) => {
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Quantity</th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Material</th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Material Quantity</th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Unit</th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Assigned To</th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Assign Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Status</th>
@@ -305,18 +438,18 @@ const handleTaskSubmit = async (e) => {
             <tbody>
               {currentTasks.length === 0 ? (
                 <tr>
-                  <td colSpan="10" className="px-6 py-3 text-center">No tasks assigned</td>
+                  <td colSpan="11" className="px-6 py-3 text-center">No tasks assigned</td>
                 </tr>
               ) : currentTasks.map(task => (
                 <tr key={task.id} className="border-t border-gray-200 hover:bg-gray-50">
-<td className="px-6 py-3 whitespace-nowrap">{task.batch}</td>
-<td className="px-6 py-3 whitespace-nowrap">{task.task}</td>
-<td className="px-6 py-3 whitespace-nowrap">{task.quantity}</td>
-<td className="px-6 py-3 whitespace-nowrap">{task.materialName || '-'}</td>
-<td className="px-6 py-3 whitespace-nowrap">{task.materialQuantity}</td>
- <td className="px-6 py-3 whitespace-nowrap">{task.assigned_to || '-'}</td>
-<td className="px-6 py-3 whitespace-nowrap">{task.assignDate}</td>
-
+                  <td className="px-6 py-3 whitespace-nowrap">{task.batch}</td>
+                  <td className="px-6 py-3 whitespace-nowrap">{task.task}</td>
+                  <td className="px-6 py-3 whitespace-nowrap">{task.quantity}</td>
+                  <td className="px-6 py-3 whitespace-nowrap">{task.materialName || '-'}</td>
+                  <td className="px-6 py-3 whitespace-nowrap">{task.materialQuantity}</td>
+                  <td className="px-6 py-3 whitespace-nowrap">{task.unit || '-'}</td>
+                  <td className="px-6 py-3 whitespace-nowrap">{task.assigned_to || '-'}</td>
+                  <td className="px-6 py-3 whitespace-nowrap">{task.assignDate}</td>
                   <td className="px-6 py-3 whitespace-nowrap">
                     <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                       task.status === 'On Track' ? 'bg-green-100 text-green-800' :

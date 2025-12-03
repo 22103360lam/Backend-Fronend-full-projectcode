@@ -14,10 +14,18 @@ export default function Addinventory({ closeModal, item, onSave }) {
   useEffect(() => {
     if (item) {
       setFormData({
-        name: item.name || '',
-        quantity: item.quantity || '',
-        minimumRequired: item.minimumRequired || '',
-        status: item.status || ''
+        name: item.item_name ?? item.name ?? '',
+        quantity: item.quantity ?? '',
+        minimumRequired: item.minimum_required ?? item.minimumRequired ?? '',
+        status: item.status ?? ''
+      })
+    } else {
+      // reset when creating new
+      setFormData({
+        name: '',
+        quantity: '',
+        minimumRequired: '',
+        status: ''
       })
     }
   }, [item])
@@ -35,9 +43,9 @@ export default function Addinventory({ closeModal, item, onSave }) {
     const newErrors = {}
     if (!formData.name.trim()) newErrors.name = 'Item name is required'
     if (!formData.quantity) newErrors.quantity = 'Quantity is required'
-    else if (formData.quantity < 1) newErrors.quantity = 'Quantity must be positive'
+    else if (Number(formData.quantity) < 1) newErrors.quantity = 'Quantity must be positive'
     if (!formData.minimumRequired) newErrors.minimumRequired = 'Minimum required is required'
-    else if (formData.minimumRequired < 1) newErrors.minimumRequired = 'Minimum required must be positive'
+    else if (Number(formData.minimumRequired) < 1) newErrors.minimumRequired = 'Minimum required must be positive'
     if (!formData.status) newErrors.status = 'Status is required'
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -46,7 +54,17 @@ export default function Addinventory({ closeModal, item, onSave }) {
   const handleSubmit = (e) => {
     e.preventDefault()
     if (validateForm()) {
-      onSave(formData) // <-- parent component e data pathacche
+      // include id when editing so parent knows to PUT
+      const payload = {
+        id: item?.id ?? null,
+        name: formData.name.trim(),
+        quantity: Number(formData.quantity),
+        minimumRequired: Number(formData.minimumRequired),
+        status: formData.status,
+      }
+      onSave(payload) // send normalized payload to parent
+      // do not close modal here if parent wants to show errors; parent will close via fetch success
+      // but keep current behavior: close now
       closeModal()
     }
   }
@@ -108,7 +126,7 @@ export default function Addinventory({ closeModal, item, onSave }) {
 
               <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 mt-6">
                 <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">Cancel</button>
-                <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">{item ? 'Save Changes' : 'Add Item'}</button>
+                <button type="submit" className="px-4 py-2 bg-[#6C5CE7] text-white rounded-md hover:bg-[#5949D5]">{item ? 'Save Changes' : 'Add Item'}</button>
               </div>
             </form>
           </div>

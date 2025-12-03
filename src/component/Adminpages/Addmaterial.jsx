@@ -97,13 +97,33 @@ export default function AddMaterial({ closeModal, initialData = null, onSave }) 
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {field.replace("_"," ").replace(/\b\w/g, l => l.toUpperCase())} <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type={field === "quantity" || field === "min_required" ? "number" : "text"}
-                  name={field}
-                  value={formData[field]}
-                  onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base ${errors[field] ? 'border-red-500 bg-red-50' : ''}`}
-                />
+
+                {field === "unit" ? (
+                  <select
+                    name="unit"
+                    value={formData.unit}
+                    onChange={handleInputChange}
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base ${errors.unit ? 'border-red-500 bg-red-50' : ''}`}
+                    required
+                  >
+                    <option value="">Select Unit</option>
+                    <option value="Kg">Kg</option>
+                    <option value="Yard">Yard</option>
+                    <option value="Meter">Meter</option>
+                    <option value="Dozen">Dozen</option>
+                    <option value="Gross">Gross</option>
+                    <option value="Piece">Piece</option>
+                  </select>
+                ) : (
+                  <input
+                    type={field === "quantity" || field === "min_required" ? "number" : "text"}
+                    name={field}
+                    value={formData[field]}
+                    onChange={handleInputChange}
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base ${errors[field] ? 'border-red-500 bg-red-50' : ''}`}
+                  />
+                )}
+
                 {errors[field] && <p className="text-red-500 text-xs mt-1">{errors[field]}</p>}
               </div>
             ))}

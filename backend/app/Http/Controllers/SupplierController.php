@@ -7,13 +7,13 @@ use Illuminate\Http\Request;
 
 class SupplierController extends Controller
 {
-    // 1️⃣ Get all suppliers
+    //  Get all suppliers
     public function index()
     {
         return response()->json(Supplier::all());
     }
 
-    // 2️⃣ Get a single supplier
+    //  Get a single supplier
     public function show($id)
     {
         $supplier = Supplier::find($id);
@@ -23,7 +23,7 @@ class SupplierController extends Controller
         return response()->json($supplier);
     }
 
-    // 3️⃣ Create supplier
+    //  Create supplier
     public function store(Request $request)
     {
         $request->validate([

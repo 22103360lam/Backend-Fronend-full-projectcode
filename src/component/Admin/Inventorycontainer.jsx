@@ -1,66 +1,135 @@
-import React, { useState } from 'react'
-import Addinventory from '../Adminpages/Addinventory'
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import Addinventory from '../Adminpages/Addinventory';
+
+// Axios base URL pointing to your Laravel API
+axios.defaults.baseURL = 'http://localhost:8000/api';
 
 export default function Inventorycontainer() {
-  const [inventory, setInventory] = useState([
-    { id: 1, name: 'Blue Cotton Shirt', quantity: 120, minimumRequired: 50, status: 'In Stock' },
-    { id: 2, name: 'Black Formal Pants', quantity: 85, minimumRequired: 40, status: 'In Stock' },
-    { id: 3, name: 'Red Summer Dress', quantity: 12, minimumRequired: 30, status: 'Low Stock' },
-    { id: 4, name: 'White T-Shirt', quantity: 67, minimumRequired: 35, status: 'In Stock' },
-    { id: 5, name: 'Blue Denim Jeans', quantity: 34, minimumRequired: 25, status: 'Medium Stock' },
-    { id: 6, name: 'Green Polo Shirt', quantity: 8, minimumRequired: 20, status: 'Low Stock' },
-    { id: 7, name: 'Black Leather Jacket', quantity: 15, minimumRequired: 10, status: 'Medium Stock' },
-    { id: 8, name: 'Gray Hoodie', quantity: 92, minimumRequired: 45, status: 'In Stock' },
-  ])
+  const [inventory, setInventory] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
-  const [showModal, setShowModal] = useState(false)
-  const [selectedItem, setSelectedItem] = useState(null)
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 5
+  // Fetch inventory on mount
+  useEffect(() => {
+    fetchInventory();
+  }, []);
 
-  const openModal = (item = null) => { setSelectedItem(item); setShowModal(true) }
-  const closeModal = () => setShowModal(false)
-
-  const handleSave = (item) => {
-    if (item.id) {
-      setInventory(prev => prev.map(i => i.id === item.id ? item : i))
-    } else {
-      const newItem = { ...item, id: Date.now() }
-      setInventory(prev => [...prev, newItem])
+  // Fetch inventory from API
+  const fetchInventory = async () => {
+    try {
+      const res = await axios.get('/inventory');
+      if (Array.isArray(res.data)) {
+        setInventory(res.data);
+        console.log('Inventory API response:', res.data);
+      } else {
+        console.error('Unexpected payload:', res.data);
+        setInventory([]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch inventory:', error);
+      setInventory([]);
     }
-    closeModal()
-  }
+  };
 
-  const totalItems = inventory.length
-  const inStock = inventory.filter(item => item.status === 'In Stock').length
-  const lowStock = inventory.filter(item => item.status === 'Low Stock').length
+  // Open / close modal
+  const openModal = (item = null) => { setSelectedItem(item); setShowModal(true); };
+  const closeModal = () => setShowModal(false);
 
-  const indexOfLastItem = currentPage * itemsPerPage
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage
-  const currentItems = inventory.slice(indexOfFirstItem, indexOfLastItem)
-  const totalPages = Math.ceil(inventory.length / itemsPerPage)
+  // Save or update inventory
+  const handleSave = async (item) => {
+    try {
+      const payload = {
+        item_name: item.name ?? item.item_name ?? '',
+        quantity: Number(item.quantity ?? 0),
+        minimum_required: Number(item.minimumRequired ?? item.minimum_required ?? 0),
+        unit: 'Piece', // static per requirement
+        status: item.status ?? 'In Stock',
+      };
 
-  const goToPage = (pageNumber) => setCurrentPage(pageNumber)
+      if (item.id) {
+        await axios.put(`/inventory/${item.id}`, payload);
+      } else {
+        await axios.post('/inventory', payload);
+      }
 
-  const handleDelete = (id) => {
-    if (window.confirm('Are you sure you want to delete this item?')) {
-      setInventory(prev => prev.filter(item => item.id !== id))
+      await fetchInventory();
+      closeModal();
+    } catch (error) {
+      console.error('Failed to save inventory:', error);
+      alert('Save failed — see console.');
     }
-  }
+  };
+
+  // Delete inventory
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this item?')) return;
+
+    try {
+      await axios.delete(`/inventory/${id}`);
+      setInventory(prev => prev.filter(item => item.id !== id));
+    } catch (error) {
+      console.error('Failed to delete inventory:', error);
+    }
+  };
+
+  // Save a production-derived row into inventories
+  const handleSaveFromProduction = async (prodItem) => {
+    try {
+      // If the production row includes a batch_id, call server-side converter endpoint
+      if (prodItem.batch_id) {
+        await axios.post(`/productions/${prodItem.batch_id}/to-inventory`);
+      } else {
+        const payload = {
+          item_name: prodItem.item_name ?? prodItem.task ?? '',
+          quantity: Number(parseInt((prodItem.quantity ?? '').toString().replace(/[^0-9]/g, '')) || 0),
+          minimum_required: 0,
+          unit: prodItem.unit ?? 'Piece',
+          status: prodItem.status ?? 'In Stock',
+        };
+        await axios.post('/inventory', payload);
+      }
+
+      await fetchInventory();
+      alert('Saved production item to inventory');
+    } catch (error) {
+      console.error('Failed to save production item to inventory:', error);
+      alert('Failed to save production item — see console.');
+    }
+  };
+
+  // Pagination
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = inventory.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(inventory.length / itemsPerPage);
+
+  const goToPage = (pageNumber) => {
+    if (pageNumber < 1 || pageNumber > totalPages) return;
+    setCurrentPage(pageNumber);
+  };
+
+  // Summary cards
+  const totalItems = inventory.length;
+  const inStock = inventory.filter(item => item.status === 'In Stock').length;
+  const lowStock = inventory.filter(item => item.status === 'Low Stock').length;
 
   return (
     <div>
       <section className="p-4 md:p-6 bg-[#eff1f9] min-h-screen">
+        {/* Header */}
         <div className="mb-4 flex items-start justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Inventory / Finished Goods</h1>
             <p className="text-gray-600 mt-1">View current inventory levels and product availability status.</p>
           </div>
           <button
-            onClick={openModal}
+            onClick={() => openModal(null)}
             className="bg-[#6C5CE7] hover:bg-[#5949D5] text-white font-semibold py-2 px-4 rounded-md text-base flex items-center space-x-2"
           >
-            <span>Add Material</span>
+            <span>Add Inventory</span>
           </button>
         </div>
 
@@ -75,7 +144,6 @@ export default function Inventorycontainer() {
               <img src="/asset/box-minimalistic-svgrepo-com.svg" alt="total items" className="h-10 w-10 ml-4 opacity-70" />
             </div>
           </div>
-
           <div className="relative overflow-hidden rounded-lg p-6 flex flex-col justify-between bg-white shadow-md border-l-4 border-[#28A745] lg:border-l-8 text-gray-800">
             <div className="flex justify-between items-start mb-2">
               <div className="flex flex-col items-start">
@@ -85,7 +153,6 @@ export default function Inventorycontainer() {
               <img src="/asset/instock (2).png" alt="in stock" className="h-10 w-10 ml-4 opacity-70" />
             </div>
           </div>
-
           <div className="relative overflow-hidden rounded-lg p-6 flex flex-col justify-between bg-white shadow-md border-l-4 border-[#EF4444] lg:border-l-8 text-gray-800">
             <div className="flex justify-between items-start mb-2">
               <div className="flex flex-col items-start">
@@ -105,35 +172,46 @@ export default function Inventorycontainer() {
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Item Name</th>
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Quantity</th>
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Minimum Required</th>
+                <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Unit</th>
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {currentItems.map(item => (
-                <tr key={item.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-base font-medium text-gray-900">{item.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-base text-gray-500">{item.quantity}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-base text-gray-500">{item.minimumRequired}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-sm leading-5 font-semibold rounded-full ${
+            <tbody>
+              {currentItems.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="px-6 py-3 text-center">No inventory found</td>
+                </tr>
+              ) : currentItems.map((item, idx) => (
+                <tr key={`${item.id ?? 'noid'}-${(item.item_name ?? 'item').toString().replace(/\s+/g,'_')}-${idx}`} className="border-t border-gray-200 hover:bg-gray-50">
+                  <td className="px-6 py-3 whitespace-nowrap">{item.item_name}</td>
+                  <td className="px-6 py-3 whitespace-nowrap">{item.quantity}</td>
+                  <td className="px-6 py-3 whitespace-nowrap">{item.minimum_required ?? item.minimumRequired ?? '-'}</td>
+                  <td className="px-6 py-3 whitespace-nowrap">Piece</td>
+                  <td className="px-6 py-3 whitespace-nowrap">
+                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                       item.status === 'Low Stock' ? 'bg-red-100 text-red-800' :
-                      item.status === 'Medium Stock' ? 'bg-yellow-100 text-yellow-800' :
+                      item.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800' :
                       'bg-green-100 text-green-800'
                     }`}>{item.status}</span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-base font-medium">
-                    <div className="flex space-x-2">
-                      <button onClick={() => openModal(item)} className="text-indigo-600 hover:text-indigo-900 p-1 rounded-full hover:bg-indigo-50" title="Edit">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                        </svg>
-                      </button>
-                      <button onClick={() => handleDelete(item.id)} className="text-red-600 hover:text-red-900 p-1 rounded-full hover:bg-red-50" title="Delete">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                        </svg>
-                      </button>
+                  <td className="px-6 py-3 text-center">
+                    <div className="inline-flex items-center gap-2">
+                      {/* If this row comes from production (no inventory id), show Save button */}
+                      {(!item.id || item.source === 'production') ? (
+                        <button onClick={() => handleSaveFromProduction(item)} className="px-3 py-1 bg-green-100 text-green-800 rounded-md text-sm">
+                          Save
+                        </button>
+                      ) : (
+                        <>
+                          <button onClick={() => openModal(item)} className="p-1 rounded-full hover:bg-blue-50">
+                            <img src="asset/edit.png" alt="Edit" className="w-4 h-4"/>
+                          </button>
+                          <button onClick={() => handleDelete(item.id)} className="p-1 rounded-full hover:bg-red-50">
+                            <img src="asset/delete.png" alt="Delete" className="w-4 h-4"/>
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -143,23 +221,19 @@ export default function Inventorycontainer() {
         </div>
 
         {/* Pagination */}
-        <div className="mt-6 flex justify-end space-x-2">
-          <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1} className="px-3 py-2 border border-gray-300 rounded-md text-base hover:bg-gray-50 disabled:opacity-50">
-            Previous
-          </button>
-          {[...Array(totalPages)].map((_, idx) => (
-            <button key={idx + 1} onClick={() => goToPage(idx + 1)} className={`px-3 py-2 rounded-md text-base ${currentPage === idx + 1 ? 'bg-[#6C5CE7] text-white' : 'border border-gray-300 hover:bg-gray-50'}`}>
-              {idx + 1}
-            </button>
-          ))}
-          <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages} className="px-3 py-2 border border-gray-300 rounded-md text-base hover:bg-gray-50 disabled:opacity-50">
-            Next
-          </button>
-        </div>
+        {totalPages > 1 && (
+          <div className="mt-6 flex justify-end space-x-2">
+            <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1} className="px-3 py-2 border border-gray-300 rounded-md text-base hover:bg-gray-50 disabled:opacity-50">Previous</button>
+            {[...Array(totalPages)].map((_, idx) => (
+              <button key={idx + 1} onClick={() => goToPage(idx + 1)} className={`px-3 py-2 rounded-md text-base ${currentPage === idx + 1 ? 'bg-[#6C5CE7] text-white' : 'border border-gray-300 hover:bg-gray-50'}`}>{idx+1}</button>
+            ))}
+            <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages} className="px-3 py-2 border border-gray-300 rounded-md text-base hover:bg-gray-50 disabled:opacity-50">Next</button>
+          </div>
+        )}
 
         {/* Modal */}
         {showModal && <Addinventory closeModal={closeModal} item={selectedItem} onSave={handleSave} />}
       </section>
     </div>
-  )
+  );
 }

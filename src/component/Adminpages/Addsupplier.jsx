@@ -89,145 +89,131 @@ export default function Addsupplier({ closeModal, onSave, initialData }) {
   };
 
   return (
-    <div>
-      <div
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-        onClick={handleOverlayClick}
-      >
-        <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">
-              {initialData ? "Edit Supplier" : "Add New Supplier"}
-            </h2>
-            <button
-              onClick={closeModal}
-              className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-              </svg>
-            </button>
-          </div>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={handleOverlayClick}>
+      <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900">{initialData ? 'Edit Supplier' : 'Add New Supplier'}</h2>
+          <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-full">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
 
-          <div className="p-6">
-            <form className="space-y-4" onSubmit={handleSubmit}>
-              {/* Supplier Name */}
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">Supplier Name *</label>
-                <input
-                  type="text"
-                  name="supplier"
-                  value={formData.supplier}
-                  onChange={handleInputChange}
-                  placeholder="Enter supplier name"
-                  className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                    errors.supplier ? "border-red-500 bg-red-50" : "border-gray-300"
-                  }`}
-                />
-                {errors.supplier && <p className="text-red-500 text-sm mt-1">{errors.supplier}</p>}
-              </div>
+        <div className="p-6 pb-0">
+          <form id="supplier-form" className="space-y-5" onSubmit={handleSubmit}>
+            {/* Supplier Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Supplier Name <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                name="supplier"
+                value={formData.supplier}
+                onChange={handleInputChange}
+                placeholder="Enter supplier name"
+                className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base ${errors.supplier ? 'border-red-500 bg-red-50' : ''}`}
+              />
+              {errors.supplier && <p className="text-red-500 text-xs mt-1">{errors.supplier}</p>}
+            </div>
 
-              {/* Contact */}
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">Email or Phone *</label>
-                <input
-                  type="text"
-                  name="contact"
-                  value={formData.contact}
-                  onChange={handleInputChange}
-                  placeholder="Enter email or phone number"
-                  className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                    errors.contact ? "border-red-500 bg-red-50" : "border-gray-300"
-                  }`}
-                />
-                {errors.contact && <p className="text-red-500 text-sm mt-1">{errors.contact}</p>}
-              </div>
+            {/* Contact */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email or Phone <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                name="contact"
+                value={formData.contact}
+                onChange={handleInputChange}
+                placeholder="Enter email or phone number"
+                className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base ${errors.contact ? 'border-red-500 bg-red-50' : ''}`}
+              />
+              {errors.contact && <p className="text-red-500 text-xs mt-1">{errors.contact}</p>}
+            </div>
 
-              {/* Material */}
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">Material *</label>
-                <input
-                  type="text"
-                  name="material"
-                  value={formData.material}
-                  onChange={handleInputChange}
-                  placeholder="Enter material type"
-                  className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                    errors.material ? "border-red-500 bg-red-50" : "border-gray-300"
-                  }`}
-                />
-                {errors.material && <p className="text-red-500 text-sm mt-1">{errors.material}</p>}
-              </div>
+            {/* Material */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Material <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                name="material"
+                value={formData.material}
+                onChange={handleInputChange}
+                placeholder="Enter material type"
+                className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base ${errors.material ? 'border-red-500 bg-red-50' : ''}`}
+              />
+              {errors.material && <p className="text-red-500 text-xs mt-1">{errors.material}</p>}
+            </div>
 
-              {/* Quantity */}
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">Quantity *</label>
-                <input
-                  type="number"
-                  name="quantity"
-                  value={formData.quantity}
-                  onChange={handleInputChange}
-                  placeholder="Enter quantity"
-                  min="0"
-                  className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                    errors.quantity ? "border-red-500 bg-red-50" : "border-gray-300"
-                  }`}
-                />
-                {errors.quantity && <p className="text-red-500 text-sm mt-1">{errors.quantity}</p>}
-              </div>
+            {/* Quantity */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Quantity <span className="text-red-500">*</span></label>
+              <input
+                type="number"
+                name="quantity"
+                value={formData.quantity}
+                onChange={handleInputChange}
+                placeholder="Enter quantity"
+                min="0"
+                className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base ${errors.quantity ? 'border-red-500 bg-red-50' : ''}`}
+              />
+              {errors.quantity && <p className="text-red-500 text-xs mt-1">{errors.quantity}</p>}
+            </div>
 
-              {/* Unit */}
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">Unit *</label>
-                <input
-                  type="text"
-                  name="unit"
-                  value={formData.unit}
-                  onChange={handleInputChange}
-                  placeholder="Enter unit (e.g., pcs, kg)"
-                  className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                    errors.unit ? "border-red-500 bg-red-50" : "border-gray-300"
-                  }`}
-                />
-                {errors.unit && <p className="text-red-500 text-sm mt-1">{errors.unit}</p>}
-              </div>
+            {/* Unit */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Unit <span className="text-red-500">*</span></label>
+              <select
+                name="unit"
+                value={formData.unit}
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base ${errors.unit ? 'border-red-500 bg-red-50' : ''}`}
+                required
+              >
+                <option value="">Select Unit</option>
+                <option value="Kg">Kg</option>
+                <option value="Yard">Yard</option>
+                <option value="Meter">Meter</option>
+                <option value="Dozen">Dozen</option>
+                <option value="Gross">Gross</option>
+                <option value="Piece">Piece</option>
+              </select>
+              {errors.unit && <p className="text-red-500 text-xs mt-1">{errors.unit}</p>}
+            </div>
 
-              {/* Status */}
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">Status *</label>
-                <select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleInputChange}
-                  className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                    errors.status ? "border-red-500 bg-red-50" : "border-gray-300"
-                  }`}
-                >
-                  <option value="">Select Status</option>
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                  <option value="Pending">Pending</option>
-                </select>
-                {errors.status && <p className="text-red-500 text-sm mt-1">{errors.status}</p>}
-              </div>
+            {/* Status */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status <span className="text-red-500">*</span></label>
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base ${errors.status ? 'border-red-500 bg-red-50' : ''}`}
+                required
+              >
+                <option value="">Select Status</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+              {errors.status && <p className="text-red-500 text-xs mt-1">{errors.status}</p>}
+            </div>
+          </form>
+        </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 mt-6">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  {initialData ? "Update Supplier" : "Add Supplier"}
-                </button>
-              </div>
-            </form>
-          </div>
+        <div className="sticky bottom-0 left-0 bg-white px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={closeModal}
+            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="supplier-form"
+            className="px-4 py-2 bg-[#6C5CE7] text-white rounded-md hover:bg-[#5949D5]"
+          >
+            {initialData ? 'Update Supplier' : 'Add Supplier'}
+          </button>
         </div>
       </div>
     </div>

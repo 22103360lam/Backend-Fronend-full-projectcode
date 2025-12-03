@@ -125,14 +125,20 @@ export default function UserManageContainer({ closeModal, initialData, onSave })
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Department <span className="text-red-500">*</span>
             </label>
-            <input
-              type="text"
+            <select
               value={formData.department}
               onChange={(e) => setFormData({ ...formData, department: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter department"
               required
-            />
+            >
+              <option value="" disabled>
+                Select department
+              </option>
+              <option value="Production">Production</option>
+              <option value="Quality Control">Quality Control</option>
+              <option value="Management">Management</option>
+              <option value="Administration">Administration</option>
+            </select>
           </div>
 
           {/* Password */}

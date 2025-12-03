@@ -17,13 +17,14 @@ export default function UserMainContainer() {
     const fetchUsers = async () => {
       try {
         const res = await axios.get("http://127.0.0.1:8000/api/users");
+        console.log('users API response:', res.data); // <- add this to inspect returned fields
         const mappedUsers = res.data.map(u => ({
           id: u.id,
           fullName: u.name,
           emailOrPhone: u.email || u.phone || "-",
           role: u.role,
-          department: u.department || "-",
-          status: loggedInUser && loggedInUser.id === u.id ? loggedInUserStatus : "Inactive", // use context status
+          department: u.department ?? u.dept ?? "-", // try multiple keys, show - only if truly missing
+          status: loggedInUser && loggedInUser.id === u.id ? loggedInUserStatus : "Inactive",
           lastActive: "Just now",
           password: "********" // hide password
         }));
@@ -84,7 +85,7 @@ export default function UserMainContainer() {
     <div className="p-4 md:p-6 bg-[#eff1f9] min-h-screen">
       {/* Header */}
       <div className="flex justify-between mb-4">
-        <h1 className="text-3xl font-semibold text-gray-900">User Management</h1>
+        <h1 className="text-2xl font-semibold text-gray-900">User Management</h1>
         <button
           onClick={() => openModal()}
           className="bg-[#6C5CE7] hover:bg-[#5949D5] text-white font-semibold py-2 px-4 rounded-md flex items-center space-x-2"
@@ -98,8 +99,8 @@ export default function UserMainContainer() {
         <div className="relative overflow-hidden rounded-lg p-6 bg-white shadow-md border-l-8 text-gray-800" style={{ borderColor: "#7db5fe" }}>
           <div className="flex justify-between items-center mb-4">
             <div>
-              <p className="text-lg font-medium uppercase mb-1" style={{ color: "#7db5fe" }}>Total Users</p>
-              <p className="text-4xl font-bold">{totalUsers}</p>
+              <p className=" font-medium uppercase mb-1" style={{ color: "#7db5fe" }}>Total Users</p>
+              <p className="text-xl font-bold">{totalUsers}</p>
             </div>
             <img src="asset/users-svgrepo-com.svg" className="h-12 w-12 opacity-80" alt="Users" />
           </div>
@@ -108,8 +109,8 @@ export default function UserMainContainer() {
         <div className="relative overflow-hidden rounded-lg p-6 bg-white shadow-md border-l-8 text-gray-800" style={{ borderColor: "#6C5CE7" }}>
           <div className="flex justify-between items-center mb-4">
             <div>
-              <p className="text-lg font-medium uppercase mb-1" style={{ color: "#6C5CE7" }}>Administrators</p>
-              <p className="text-4xl font-bold">{totalAdmins}</p>
+              <p className=" font-medium uppercase mb-1" style={{ color: "#6C5CE7" }}>Administrations</p>
+              <p className="text-xl font-bold">{totalAdmins}</p>
             </div>
             <img src="asset/shield-user-svgrepo-com.svg" className="h-12 w-12 opacity-80" alt="Admins" />
           </div>
@@ -118,8 +119,8 @@ export default function UserMainContainer() {
         <div className="relative overflow-hidden rounded-lg p-6 bg-white shadow-md border-l-8 text-gray-800" style={{ borderColor: "#fc7a30" }}>
           <div className="flex justify-between items-center mb-4">
             <div>
-              <p className="text-lg font-medium uppercase mb-1" style={{ color: "#fc7a30" }}>Departments</p>
-              <p className="text-4xl font-bold">{departmentsCount}</p>
+              <p className="font-medium uppercase mb-1" style={{ color: "#fc7a30" }}>Departments</p>
+              <p className="text-xl font-bold">{departmentsCount}</p>
             </div>
             <img src="asset/building-svgrepo-com.svg" className="h-12 w-12 opacity-80" alt="Departments" />
           </div>

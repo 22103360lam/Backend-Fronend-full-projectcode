@@ -11,13 +11,14 @@ class Production extends Model
 
     protected $table = 'productions';
 
-    protected $fillable = [
+        protected $fillable = [
         'batch_id',
         'task',
         'quantity',
         'material_id',
         'material_name',
         'material_quantity',
+        'unit',
         'assigned_user_id',
         'assigned_to',   
         'assign_date',

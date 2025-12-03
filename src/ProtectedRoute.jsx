@@ -3,13 +3,18 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 
 const ProtectedRoute = ({ role, children }) => {
-  const { user, status } = useAuth();
+  const { user, token, status } = useAuth();
 
-  // Only redirect if user is not loaded and status inactive
-  if (!user && status !== "Active") return <Navigate to="/" />; 
+  // Still loading state → don't redirect yet
+  if (token && !user) {
+    return <div>Loading...</div>; // or a spinner UI
+  }
 
-  // If role is required, check role
-  if (role && user?.role !== role) return <Navigate to="/" />; 
+  // No user → redirect login
+  if (!user) return <Navigate to="/" />;
+
+  // Role check (if role provided)
+  if (role && user.role !== role) return <Navigate to="/" />;
 
   return children;
 };

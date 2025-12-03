@@ -67,4 +67,9 @@ class Kernel extends HttpKernel
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
     ];
+    //expired token middleware for logout
+    protected $routeMiddleware = [
+    'check.token.expiry' => \App\Http\Middleware\CheckTokenExpiry::class,
+     ];
+
 }

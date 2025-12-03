@@ -8,9 +8,9 @@ export default function Nav() {
 
    //  current path pai 
   const isActive = (path) =>
-    location.pathname === path ? "bg-[#6C5CE7] font-bold text-[#ffffff] hover:bg-[#5949D5]  " : "font-semibold text-[#000000] hover:bg-[#5949D5]";
+    location.pathname === path ? "bg-[#6C5CE7] font-bold text-[#ffffff] hover:bg-[#5949D5]  " : "font-semibold text-[#000000] hover:bg-[#5949D5] hover:text-[#ffffff]";
   
-//  sidebar kholabondher kaj kore 
+//  sidebar on off task
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };

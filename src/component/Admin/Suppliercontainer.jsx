@@ -125,7 +125,7 @@ export default function Suppliercontainer() {
                 <p className="text-4xl font-bold text-gray-900">{totalSuppliers}</p>
               </div>
               <img
-                src="/asset/building-svgrepo-com.svg"
+                src="/asset/Suppliercard.svg"
                 className="h-12 w-12 opacity-80"
                 alt="Suppliers"
               />
