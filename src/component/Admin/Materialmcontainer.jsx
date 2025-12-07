@@ -69,7 +69,7 @@ export default function MaterialMainContainer() {
     <div>
       <section className="p-4 md:p-6 bg-[#eff1f9] min-h-screen">
         <div className="flex justify-between mb-4">
-          <h1 className="text-3xl font-semibold text-gray-900">Raw Material Management</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">Raw Material Management</h1>
           <button onClick={handleAdd} className="bg-[#6C5CE7] hover:bg-[#5949D5] text-white font-semibold py-2 px-4 rounded-md flex items-center space-x-2 text-base">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
               <path d="M12 4v16m8-8H4" />
@@ -85,8 +85,8 @@ export default function MaterialMainContainer() {
           <div className="relative overflow-hidden rounded-lg p-6 flex flex-col justify-between bg-white shadow-md border-l-8" style={{ borderColor: "#5A4BCF" }}>
             <div className="flex justify-between items-center mb-4">
               <div className="flex flex-col items-start">
-                <p className="text-lg font-medium uppercase mb-1" style={{ color: "#5A4BCF" }}>Total Materials</p>
-                <p className="text-4xl font-bold">{totalMaterials}</p>
+                <p className=" font-medium uppercase mb-1" style={{ color: "#5A4BCF" }}>Total Materials</p>
+                <p className="text-xl font-bold">{totalMaterials}</p>
               </div>
               <img src="/asset/box-minimalistic-svgrepo-com.svg" alt="total materials" className="h-12 w-12 opacity-80" />
             </div>
@@ -94,8 +94,8 @@ export default function MaterialMainContainer() {
           <div className="relative overflow-hidden rounded-lg p-6 flex flex-col justify-between bg-white shadow-md border-l-8" style={{ borderColor: "#EF4444" }}>
             <div className="flex justify-between items-center mb-4">
               <div className="flex flex-col items-start">
-                <p className="text-lg font-medium uppercase mb-1" style={{ color: "#EF4444" }}>Low Stock</p>
-                <p className="text-4xl font-bold">{lowStockCount}</p>
+                <p className=" font-medium uppercase mb-1" style={{ color: "#EF4444" }}>Low Stock</p>
+                <p className="text-xl font-bold">{lowStockCount}</p>
               </div>
               <img src="/asset/alert-filled-svgrepo-com.svg" alt="low stock" className="h-12 w-12 opacity-80" />
             </div>
@@ -103,8 +103,8 @@ export default function MaterialMainContainer() {
           <div className="relative overflow-hidden rounded-lg p-6 flex flex-col justify-between bg-white shadow-md border-l-8" style={{ borderColor: "#28A745" }}>
             <div className="flex justify-between items-center mb-4">
               <div className="flex flex-col items-start">
-                <p className="text-lg font-medium uppercase mb-1" style={{ color: "#28A745" }}>Suppliers</p>
-                <p className="text-4xl font-bold">{suppliersCount}</p>
+                <p className=" font-medium uppercase mb-1" style={{ color: "#28A745" }}>Suppliers</p>
+                <p className="text-xl font-bold">{suppliersCount}</p>
               </div>
               <img src="/asset/factory-svgrepo-com (1).svg" alt="suppliers" className="h-12 w-12 opacity-80" />
             </div>

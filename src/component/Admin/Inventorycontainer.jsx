@@ -138,8 +138,8 @@ export default function Inventorycontainer() {
           <div className="relative overflow-hidden rounded-lg p-6 flex flex-col justify-between bg-white shadow-md border-l-4 border-[#5A4BCF] lg:border-l-8 text-gray-800">
             <div className="flex justify-between items-start mb-2">
               <div className="flex flex-col items-start">
-                <p className="text-lg font-medium text-[#5A4BCF] uppercase mb-1">Total Items</p>
-                <p className="text-4xl font-bold">{totalItems}</p>
+                <p className=" font-medium text-[#5A4BCF] uppercase mb-1">Total Items</p>
+                <p className="text-xl font-bold">{totalItems}</p>
               </div>
               <img src="/asset/box-minimalistic-svgrepo-com.svg" alt="total items" className="h-10 w-10 ml-4 opacity-70" />
             </div>
@@ -147,8 +147,8 @@ export default function Inventorycontainer() {
           <div className="relative overflow-hidden rounded-lg p-6 flex flex-col justify-between bg-white shadow-md border-l-4 border-[#28A745] lg:border-l-8 text-gray-800">
             <div className="flex justify-between items-start mb-2">
               <div className="flex flex-col items-start">
-                <p className="text-lg font-medium text-[#28A745] uppercase mb-1">In Stock</p>
-                <p className="text-4xl font-bold">{inStock}</p>
+                <p className=" font-medium text-[#28A745] uppercase mb-1">In Stock</p>
+                <p className="text-xl font-bold">{inStock}</p>
               </div>
               <img src="/asset/instock (2).png" alt="in stock" className="h-10 w-10 ml-4 opacity-70" />
             </div>
@@ -156,8 +156,8 @@ export default function Inventorycontainer() {
           <div className="relative overflow-hidden rounded-lg p-6 flex flex-col justify-between bg-white shadow-md border-l-4 border-[#EF4444] lg:border-l-8 text-gray-800">
             <div className="flex justify-between items-start mb-2">
               <div className="flex flex-col items-start">
-                <p className="text-lg font-medium text-[#EF4444] uppercase mb-1">Low Stock Alerts</p>
-                <p className="text-4xl font-bold">{lowStock}</p>
+                <p className=" font-medium text-[#EF4444] uppercase mb-1">Low Stock Alerts</p>
+                <p className="text-xl font-bold">{lowStock}</p>
               </div>
               <img src="/asset/alert-filled-svgrepo-com.svg" alt="low stock" className="h-10 w-10 ml-4 opacity-70" />
             </div>

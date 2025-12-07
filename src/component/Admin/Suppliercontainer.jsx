@@ -80,7 +80,7 @@ export default function Suppliercontainer() {
     <div>
       <section className="p-4 md:p-6 bg-[#eff1f9] min-h-screen">
         <div className="flex justify-between mb-4">
-          <h1 className="text-3xl font-semibold text-gray-900">Supplier Management</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">Supplier Management</h1>
           <button
             onClick={handleAdd}
             className="bg-[#6C5CE7] hover:bg-[#5949D5] text-white font-semibold py-2 px-4 rounded-md flex items-center space-x-2 text-base"
@@ -114,15 +114,15 @@ export default function Suppliercontainer() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
           {/* Total */}
           <div
-            className="relative overflow-hidden rounded-lg p-6 flex flex-col justify-between bg-white shadow-md border-l-8"
+            className="relative overflow-hidden rounded-lg p-6 bg-white shadow-md border-l-8 text-gray-800"
             style={{ borderColor: "#7db5fe" }}
           >
             <div className="flex justify-between items-center mb-2">
               <div>
-                <p className="text-lg font-medium uppercase mb-1" style={{ color: "#7db5fe" }}>
+                <p className="  font-medium uppercase mb-1" style={{ color: "#7db5fe" }}>
                   Total Suppliers
                 </p>
-                <p className="text-4xl font-bold text-gray-900">{totalSuppliers}</p>
+                <p className="text-xl font-bold text-gray-900">{totalSuppliers}</p>
               </div>
               <img
                 src="/asset/Suppliercard.svg"
@@ -134,15 +134,15 @@ export default function Suppliercontainer() {
 
           {/* Active */}
           <div
-            className="relative overflow-hidden rounded-lg p-6 flex flex-col justify-between bg-white shadow-md border-l-8"
+            className="relative overflow-hidden rounded-lg p-6 bg-white shadow-md border-l-8 text-gray-800"
             style={{ borderColor: "#4af486" }}
           >
             <div className="flex justify-between items-center mb-2">
               <div>
-                <p className="text-lg font-medium uppercase mb-1" style={{ color: "#4af486" }}>
+                <p className=" font-medium uppercase mb-1" style={{ color: "#4af486" }}>
                   Active Suppliers
                 </p>
-                <p className="text-4xl font-bold text-gray-900">{activeSuppliers}</p>
+                <p className="text-xl font-bold text-gray-900">{activeSuppliers}</p>
               </div>
               <img
                 src="/asset/active-ads-svgrepo-com.svg"
@@ -154,15 +154,15 @@ export default function Suppliercontainer() {
 
           {/* Pending */}
           <div
-            className="relative overflow-hidden rounded-lg p-6 flex flex-col justify-between bg-white shadow-md border-l-8"
+            className="relative overflow-hidden rounded-lg p-6 bg-white shadow-md border-l-8 text-gray-800"
             style={{ borderColor: "#fe4747" }}
           >
             <div className="flex justify-between items-center mb-2">
               <div>
-                <p className="text-lg font-medium uppercase mb-1" style={{ color: "#fe4747" }}>
+                <p className=" font-medium uppercase mb-1" style={{ color: "#fe4747" }}>
                   Pending Alerts
                 </p>
-                <p className="text-4xl font-bold text-gray-900">{pendingAlerts}</p>
+                <p className="text-xl font-bold text-gray-900">{pendingAlerts}</p>
               </div>
               <img
                 src="/asset/alert-filled-svgrepo-com.svg"
@@ -192,7 +192,7 @@ export default function Suppliercontainer() {
                 </th>
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">
                   Unit
-                </th> {/* নতুন unit কলাম */}
+                </th> 
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">
                   Status
                 </th>

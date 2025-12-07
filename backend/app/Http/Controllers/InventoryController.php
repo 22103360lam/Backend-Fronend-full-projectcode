@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class InventoryController extends Controller
-{
+{ 
     // Fetch inventory with dynamic values from Production
     public function index()
     {

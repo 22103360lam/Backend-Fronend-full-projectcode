@@ -3,6 +3,8 @@ import axios from 'axios';
 
 export default function Productioncontainer() {
   // ===== State =====
+   
+  const [filterStatus, setFilterStatus] = useState("All"); // FILTER STATE (ONLY NEW)
   const [batches, setBatches] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [users, setUsers] = useState([]);
@@ -77,13 +79,29 @@ export default function Productioncontainer() {
       setLoading(false);
     }
   };
+  //  FILTER LOGIC (ONLY NEW)
+const filteredTasks = tasks.filter(t => {
+  if (filterStatus === "All") return true;
+  if (filterStatus === "Unused") return t.task.toLowerCase() === 'pending';   // only pending
+  if (filterStatus === "Used") return t.task && t.task.toLowerCase() !== 'pending'; // anything else
+  return t.status === filterStatus; // On Track / In Progress / Delayed
+});
 
-  // ===== Pagination logic =====
-  const totalPages = Math.max(1, Math.ceil(tasks.length / itemsPerPage));
-  if (currentPage > totalPages && totalPages > 0) setCurrentPage(totalPages);
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentTasks = tasks.slice(indexOfFirstItem, indexOfLastItem);
+
+// ===== Pagination logic =====
+const totalPages = Math.max(1, Math.ceil(filteredTasks.length / itemsPerPage));
+
+useEffect(() => {
+  if (currentPage > totalPages && totalPages > 0) {
+    setCurrentPage(totalPages);
+  }
+}, [currentPage, totalPages]);
+
+const indexOfLastItem = currentPage * itemsPerPage;
+const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
+
+
   const goToPage = (page) => {
     if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
@@ -417,7 +435,26 @@ export default function Productioncontainer() {
 
       {/* Track Progress Table */}
       <div className="space-y-2">
-        <h2 className="text-lg font-semibold text-[#000000]">Track Progress</h2>
+         <div className="flex items-center justify-between"> 
+    <h2 className="text-lg font-semibold text-[#000000]">
+      Track Progress
+    </h2>
+    <select
+  value={filterStatus}
+  onChange={(e) => {
+    setFilterStatus(e.target.value);
+    setCurrentPage(1);
+  }}
+  className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]"
+>
+  <option value="All">All</option>
+  <option value="Unused">Unused Batch</option>
+  <option value="Used">Used Batch</option>
+</select>
+  </div>
+
+
+        
         <div className="bg-white rounded-lg shadow overflow-auto">
           <table className="w-full text-sm">
             <thead className="text-white" style={{ background: 'linear-gradient(135deg, #8E7DFF, #6C5CE7)' }}>
