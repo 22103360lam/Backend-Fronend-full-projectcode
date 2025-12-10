@@ -5,7 +5,6 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\RawMaterialController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\ProductionController;
-use App\Http\Controllers\MaterialController;
 use App\Http\Controllers\InventoryController;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -45,8 +44,11 @@ Route::prefix('productions')->group(function () {
     Route::delete('{id}', [ProductionController::class, 'destroy']);
 });
 
-// Materials API
-Route::get('/materials', [MaterialController::class, 'index']);
+// Materials
+Route::get('/materials', [RawMaterialController::class, 'index']);
+Route::post('/materials', [RawMaterialController::class, 'store']);
+Route::put('/materials/{id}', [RawMaterialController::class, 'update']);
+Route::delete('/materials/{id}', [RawMaterialController::class, 'destroy']);
 
 // Inventory CRUD
 Route::get('/inventory', [InventoryController::class, 'index']);

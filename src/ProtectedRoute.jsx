@@ -5,16 +5,15 @@ import { useAuth } from "./AuthContext";
 const ProtectedRoute = ({ role, children }) => {
   const { user, token, status } = useAuth();
 
-  // Still loading state → don't redirect yet
-  if (token && !user) {
-    return <div>Loading...</div>; // or a spinner UI
+  // Loading state
+  if (status === "loading") {
+    return <div>Loading...</div>;
   }
 
-  // No user → redirect login
-  if (!user) return <Navigate to="/" />;
-
-  // Role check (if role provided)
-  if (role && user.role !== role) return <Navigate to="/" />;
+  // Not logged in or role mismatch
+  if (!user || (role && user.role !== role)) {
+    return <Navigate to="/" replace />;
+  }
 
   return children;
 };

@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import axios from 'axios'
 
 export default function Reportcontainer() {
   const [reportForm, setReportForm] = useState({
@@ -11,64 +12,99 @@ export default function Reportcontainer() {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 5
 
-  // Sample data
-  const [productionData, setProductionData] = useState([
-    { id: '#1234', product: 'Blue Shirts', quantity: 150, status: 'Completed' },
-    { id: '#1235', product: 'Black Pants', quantity: 200, status: 'In Progress' },
-    { id: '#1236', product: 'Red Dresses', quantity: 120, status: 'Completed' },
-    { id: '#1237', product: 'Green Skirts', quantity: 80, status: 'Pending' },
-    { id: '#1238', product: 'Yellow Jackets', quantity: 60, status: 'Completed' },
-    { id: '#1239', product: 'White Shirts', quantity: 90, status: 'In Progress' },
-    { id: '#1240', product: 'Purple Hoodies', quantity: 110, status: 'Completed' },
-  ])
+  // Dynamic data
+  const [productionData, setProductionData] = useState([])
+  const [materialData, setMaterialData] = useState([])
+  const [inventoryData, setInventoryData] = useState([])
+  const [supplierData, setSupplierData] = useState([])
 
-  const [materialData, setMaterialData] = useState([
-    { id: 1, material: 'Cotton Fabric', used: '85 kg', remaining: '15 kg', status: 'Low Stock' },
-    { id: 2, material: 'Silk Threads', used: '40 units', remaining: '60 units', status: 'Good' },
-    { id: 3, material: 'Buttons', used: '120 pcs', remaining: '280 pcs', status: 'Good' },
-    { id: 4, material: 'Wool Yarn', used: '35 kg', remaining: '65 kg', status: 'Good' },
-    { id: 5, material: 'Zippers', used: '80 pcs', remaining: '120 pcs', status: 'Good' },
-    { id: 6, material: 'Leather', used: '25 sq ft', remaining: '5 sq ft', status: 'Low Stock' },
-    { id: 7, material: 'Polyester', used: '90 kg', remaining: '10 kg', status: 'Low Stock' },
-  ])
+  // Delete modal state
+  const [deleteInfo, setDeleteInfo] = useState({ open: false, id: null, type: '' })
 
-  const [inventoryData, setInventoryData] = useState([
-    { id: 1, item: 'Blue Shirts', current: 120, min: 50, status: 'In Stock' },
-    { id: 2, item: 'Black Pants', current: 85, min: 40, status: 'In Stock' },
-    { id: 3, item: 'Red Dresses', current: 12, min: 30, status: 'Low Stock' },
-    { id: 4, item: 'Green Skirts', current: 200, min: 100, status: 'In Stock' },
-    { id: 5, item: 'Yellow Jackets', current: 25, min: 20, status: 'In Stock' },
-    { id: 6, item: 'White Shirts', current: 8, min: 15, status: 'Low Stock' },
-    { id: 7, item: 'Purple Hoodies', current: 150, min: 75, status: 'In Stock' },
-  ])
+  // Fetch data with fields matching table headers exactly
+  const fetchData = async (tab) => {
+    try {
+      switch(tab){
+        case 'production': {
+          const res = await axios.get('/productions')
+          setProductionData(res.data.map(item => ({
+            id: item.id ?? item.batch_id,
+            product: item.task || item.product_name || 'N/A',
+            quantity: item.quantity || 0,
+            materialQuantity: item.material_quantity || 0,
+            unit: item.unit || '-'
+          })))
+          break
+        }
+        case 'material': {
+          const res = await axios.get('/materials')
+          setMaterialData(res.data.map(item => ({
+            id: item.id,
+            material: item.material_name || item.name || 'N/A',
+            used: item.stock || 0,
+            remaining: item.min_stock || 0,
+            unit: item.unit || '-',
+            supplier: item.supplier_name
+              || item.supplierName
+              || item.supplier?.name
+              || item.supplier
+              || '-'
+          })))
+          break
+        }
+        case 'inventory': {
+          const res = await axios.get('/inventory')
+          setInventoryData(res.data.map(item => ({
+            id: item.id,
+            item: item.item_name || 'N/A',
+            current: item.quantity || 0,
+            min: item.minimum_required || 0,
+            unit: item.unit || '-'
+          })))
+          break
+        }
+        case 'supplier': {
+          const res = await axios.get('/suppliers')
+          setSupplierData(res.data.map(item => ({
+            id: item.id,
+            supplier: item.supplier_name
+              || item.supplierName
+              || item.name
+              || item.supplier
+              || 'N/A',
+            contact_person: item.contact_person || item.contactPerson || '-',
+            material: item.material || item.material_name || '-',
+            quantity: item.quantity || 0,
+            unit: item.unit || '-'
+          })))
+          break
+        }
+        default: break
+      }
+    } catch(err){
+      console.error('Error fetching data:', err)
+    }
+  }
 
-  const [supplierData, setSupplierData] = useState([
-    { id: 1, supplier: 'Global Fabrics', material: 'Cotton', quantity: '98 kg', status: 'Active' },
-    { id: 2, supplier: 'GX Ltd', material: 'Silk', quantity: '90 units', status: 'Active' },
-    { id: 3, supplier: 'Button Co.', material: 'Buttons', quantity: '500 pcs', status: 'Pending' },
-    { id: 4, supplier: 'Wool Masters', material: 'Wool', quantity: '120 kg', status: 'Active' },
-    { id: 5, supplier: 'Zip Solutions', material: 'Zippers', quantity: '300 pcs', status: 'Active' },
-    { id: 6, supplier: 'Leather Works', material: 'Leather', quantity: '50 sq ft', status: 'Pending' },
-    { id: 7, supplier: 'Poly Industries', material: 'Polyester', quantity: '200 kg', status: 'Active' },
-  ])
+  useEffect(()=>{ fetchData(activeTab) }, [activeTab])
 
   const getCurrentData = () => {
     let data = []
-    switch(activeTab) {
+    switch(activeTab){
       case 'production': data = productionData; break
       case 'material': data = materialData; break
       case 'inventory': data = inventoryData; break
       case 'supplier': data = supplierData; break
       default: return []
     }
-    const start = (currentPage - 1) * itemsPerPage
+    const start = (currentPage-1)*itemsPerPage
     const end = start + itemsPerPage
     return data.slice(start, end)
   }
 
   const getTotalPages = () => {
     let length = 0
-    switch(activeTab) {
+    switch(activeTab){
       case 'production': length = productionData.length; break
       case 'material': length = materialData.length; break
       case 'inventory': length = inventoryData.length; break
@@ -79,7 +115,7 @@ export default function Reportcontainer() {
   }
 
   const handlePageChange = (page) => {
-    if (page >= 1 && page <= getTotalPages()) setCurrentPage(page)
+    if(page>=1 && page<=getTotalPages()) setCurrentPage(page)
   }
 
   const handleTabChange = (tab) => {
@@ -88,29 +124,17 @@ export default function Reportcontainer() {
   }
 
   // Delete functions
-  const [deleteInfo, setDeleteInfo] = useState({ open: false, id: null, type: '' });
-
   const deleteRow = (id, type) => {
-    if(type === 'production') setProductionData(prev => prev.filter(i => i.id !== id))
-    if(type === 'material') setMaterialData(prev => prev.filter(i => i.id !== id))
-    if(type === 'inventory') setInventoryData(prev => prev.filter(i => i.id !== id))
-    if(type === 'supplier') setSupplierData(prev => prev.filter(i => i.id !== id))
+    if(type==='production') setProductionData(prev=>prev.filter(i=>i.id!==id))
+    if(type==='material') setMaterialData(prev=>prev.filter(i=>i.id!==id))
+    if(type==='inventory') setInventoryData(prev=>prev.filter(i=>i.id!==id))
+    if(type==='supplier') setSupplierData(prev=>prev.filter(i=>i.id!==id))
   }
+  const handleDeleteClick = (id, type) => setDeleteInfo({ open:true, id, type })
+  const confirmDelete = () => { deleteRow(deleteInfo.id, deleteInfo.type); setDeleteInfo({ open:false, id:null, type:'' }) }
+  const cancelDelete = () => setDeleteInfo({ open:false, id:null, type:'' })
 
-  const handleDeleteClick = (id, type) => {
-    setDeleteInfo({ open: true, id, type });
-  };
-
-  const confirmDelete = () => {
-    deleteRow(deleteInfo.id, deleteInfo.type);
-    setDeleteInfo({ open: false, id: null, type: '' });
-  };
-
-  const cancelDelete = () => {
-    setDeleteInfo({ open: false, id: null, type: '' });
-  };
-
-  // Download CSV
+  // CSV download
   const downloadReport = () => {
     let currentData = []
     let filename = ''
@@ -122,7 +146,7 @@ export default function Reportcontainer() {
       default: return
     }
     if(currentData.length===0){ alert('No data to download'); return }
-    const headers = Object.keys(currentData[0]).filter(k => k!=='id')
+    const headers = Object.keys(currentData[0]).filter(k=>k!=='id')
     const csvContent = [ headers.join(','), ...currentData.map(r=> headers.map(h=>r[h]).join(',')) ].join('\n')
     const blob = new Blob([csvContent], {type:'text/csv'})
     const url = window.URL.createObjectURL(blob)
@@ -133,12 +157,12 @@ export default function Reportcontainer() {
     window.URL.revokeObjectURL(url)
   }
 
-  const handleFormSubmit = (e) => { e.preventDefault(); console.log('Report generated:', reportForm) }
-  const handleInputChange = (field, value) => setReportForm(prev => ({ ...prev, [field]: value }))
+  const handleFormSubmit = (e)=>{ e.preventDefault(); console.log('Report generated:', reportForm) }
+  const handleInputChange = (field,value)=> setReportForm(prev=>({...prev,[field]:value}))
 
   const currentData = getCurrentData()
   const totalPages = getTotalPages()
-  const indexOfFirstItem = (currentPage - 1) * itemsPerPage
+  const indexOfFirstItem = (currentPage-1)*itemsPerPage
 
   return (
     <div>
@@ -205,30 +229,34 @@ export default function Reportcontainer() {
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">No.</th>
                 {activeTab==='production' && <>
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Batch ID</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Product</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Task</th>
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Quantity</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Material Quantity</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Unit</th>
                   <th className="px-6 py-3 text-center text-sm font-medium">Actions</th>
                 </>}
                 {activeTab==='material' && <>
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Material</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Used</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Remaining</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Stock Quantity</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Min Required</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Unit</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Supplier</th>
                   <th className="px-6 py-3 text-center text-sm font-medium">Actions</th>
                 </>}
                 {activeTab==='inventory' && <>
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Item</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Current Stock</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Min Level</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Quantity</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Minimum Required</th>
+
+                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Unit</th>
                   <th className="px-6 py-3 text-center text-sm font-medium">Actions</th>
                 </>}
                 {activeTab==='supplier' && <>
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Supplier</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Contact Person</th>
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Material</th>
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Quantity</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Unit</th>
                   <th className="px-6 py-3 text-center text-sm font-medium">Actions</th>
                 </>}
               </tr>
@@ -247,18 +275,10 @@ export default function Reportcontainer() {
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.id}</td>
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.product}</td>
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.quantity}</td>
-                    <td className="px-6 py-3 whitespace-nowrap">
-                      <span className={`px-2 py-1 inline-flex text-sm leading-5 font-semibold rounded-full ${
-                        row.status==='Completed'?'bg-green-100 text-green-800':
-                        row.status==='In Progress'?'bg-yellow-100 text-yellow-800':'bg-red-100 text-red-800'
-                      }`}>{row.status}</span>
-                    </td>
+                    <td className="px-6 py-3 whitespace-nowrap text-base">{row.materialQuantity}</td>
+                    <td className="px-6 py-3 whitespace-nowrap text-base">{row.unit}</td>
                     <td className="px-6 py-3 text-center text-base font-medium">
-                      <button
-                        onClick={() => handleDeleteClick(row.id, activeTab)}
-                        className="text-red-600 hover:text-red-800 p-1"
-                        title="Delete"
-                      >
+                      <button onClick={() => handleDeleteClick(row.id, activeTab)} className="text-red-600 hover:text-red-800 p-1" title="Delete">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                         </svg>
@@ -271,17 +291,10 @@ export default function Reportcontainer() {
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.material}</td>
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.used}</td>
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.remaining}</td>
-                    <td className="px-6 py-3 whitespace-nowrap">
-                      <span className={`px-2 py-1 inline-flex text-sm leading-5 font-semibold rounded-full ${
-                        row.status==='Good'?'bg-green-100 text-green-800':'bg-red-100 text-red-800'
-                      }`}>{row.status}</span>
-                    </td>
+                    <td className="px-6 py-3 whitespace-nowrap text-base">{row.unit}</td>
+                    <td className="px-6 py-3 whitespace-nowrap text-base">{row.supplier}</td>
                     <td className="px-6 py-3 text-center text-base font-medium">
-                      <button
-                        onClick={() => handleDeleteClick(row.id, activeTab)}
-                        className="text-red-600 hover:text-red-800 p-1"
-                        title="Delete"
-                      >
+                      <button onClick={() => handleDeleteClick(row.id, activeTab)} className="text-red-600 hover:text-red-800 p-1" title="Delete">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                         </svg>
@@ -294,17 +307,9 @@ export default function Reportcontainer() {
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.item}</td>
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.current}</td>
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.min}</td>
-                    <td className="px-6 py-3 whitespace-nowrap">
-                      <span className={`px-2 py-1 inline-flex text-sm leading-5 font-semibold rounded-full ${
-                        row.status==='In Stock'?'bg-green-100 text-green-800':'bg-red-100 text-red-800'
-                      }`}>{row.status}</span>
-                    </td>
+                    <td className="px-6 py-3 whitespace-nowrap text-base">{row.unit}</td>
                     <td className="px-6 py-3 text-center text-base font-medium">
-                      <button
-                        onClick={() => handleDeleteClick(row.id, activeTab)}
-                        className="text-red-600 hover:text-red-800 p-1"
-                        title="Delete"
-                      >
+                      <button onClick={() => handleDeleteClick(row.id, activeTab)} className="text-red-600 hover:text-red-800 p-1" title="Delete">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                         </svg>
@@ -315,19 +320,12 @@ export default function Reportcontainer() {
                   {/* Supplier */}
                   {activeTab==='supplier' && <>
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.supplier}</td>
+                    <td className="px-6 py-3 whitespace-nowrap text-base">{row.contact_person}</td>
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.material}</td>
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.quantity}</td>
-                    <td className="px-6 py-3 whitespace-nowrap">
-                      <span className={`px-2 py-1 inline-flex text-sm leading-5 font-semibold rounded-full ${
-                        row.status==='Active'?'bg-green-100 text-green-800':'bg-yellow-100 text-yellow-800'
-                      }`}>{row.status}</span>
-                    </td>
+                    <td className="px-6 py-3 whitespace-nowrap text-base">{row.unit}</td>
                     <td className="px-6 py-3 text-center text-base font-medium">
-                      <button
-                        onClick={() => handleDeleteClick(row.id, activeTab)}
-                        className="text-red-600 hover:text-red-800 p-1"
-                        title="Delete"
-                      >
+                      <button onClick={() => handleDeleteClick(row.id, activeTab)} className="text-red-600 hover:text-red-800 p-1" title="Delete">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                         </svg>
@@ -342,28 +340,30 @@ export default function Reportcontainer() {
         </div>
 
         {/* Delete Confirmation Modal */}
-        {deleteInfo.open && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
-            <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-xs">
-              <h3 className="text-lg font-semibold mb-4 text-center text-gray-800">Confirm Delete</h3>
-              <p className="mb-6 text-center text-gray-600">Are you sure you want to delete this item?</p>
-              <div className="flex justify-center gap-4">
-                <button
-                  onClick={confirmDelete}
-                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-semibold"
-                >
-                  Delete
-                </button>
-                <button
-                  onClick={cancelDelete}
-                  className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded font-semibold"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+      {deleteInfo.open && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+    <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-xs">
+      <h3 className="text-lg font-semibold mb-4 text-gray-800">Confirm Delete</h3>
+      <p className="text-gray-600 mb-6">Are you sure you want to delete this item?</p>
+
+      <div className="flex justify-end gap-3">
+        <button
+          onClick={cancelDelete}
+          className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-md font-semibold"
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={confirmDelete}
+          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md font-semibold"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
         {/* Pagination */}
         <div className="mt-4 flex justify-end space-x-2">
