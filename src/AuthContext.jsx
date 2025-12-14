@@ -11,7 +11,7 @@ export default function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem("token") || null);
   const [expiry, setExpiry] = useState(null);
-  const [status, setStatus] = useState("Inactive");
+  const [status, setStatus] = useState("loading");
 
   const logoutTimeout = useRef(null);
 
@@ -42,7 +42,10 @@ export default function AuthProvider({ children }) {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         localStorage.removeItem("token_expiry");
+        setStatus("Inactive");
       }
+    } else {
+      setStatus("Inactive");
     }
   }, []);
 

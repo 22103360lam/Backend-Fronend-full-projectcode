@@ -41,8 +41,8 @@ export default function Reportcontainer() {
           setMaterialData(res.data.map(item => ({
             id: item.id,
             material: item.material_name || item.name || 'N/A',
-            used: item.stock || 0,
-            remaining: item.min_stock || 0,
+            used: item.quantity || 0,
+            remaining: item.min_required || 0,
             unit: item.unit || '-',
             supplier: item.supplier_name
               || item.supplierName
