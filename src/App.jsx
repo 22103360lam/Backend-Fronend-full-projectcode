@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import AuthProvider from "./AuthContext";
 import ProtectedRoute from "./ProtectedRoute";
+import RoleLayout from "./Rolelayout";
 
 // Login Page
 import LoginPage from "./component/Login/LoginPage";
@@ -79,29 +80,30 @@ function App() {
           <Route path="/" element={<LoginPage />} />
 
           {/* Admin */}
-          <Route path="/adashboard" element={<ProtectedRoute role="Admin"><Admin><Adashboard /></Admin></ProtectedRoute>} />
-          <Route path="/ausermanage" element={<ProtectedRoute role="Admin"><Admin><Ausermanage /></Admin></ProtectedRoute>} />
-          <Route path="/amaterial" element={<ProtectedRoute role="Admin"><Admin><Amaterial /></Admin></ProtectedRoute>} />
-          <Route path="/asupplier" element={<ProtectedRoute role="Admin"><Admin><Asupplier /></Admin></ProtectedRoute>} />
-          <Route path="/ainventory" element={<ProtectedRoute role="Admin"><Admin><Ainventory /></Admin></ProtectedRoute>} />
-          <Route path="/aproduction" element={<ProtectedRoute role="Admin"><Admin><Aproduction /></Admin></ProtectedRoute>} />
-          <Route path="/areport" element={<ProtectedRoute role="Admin"><Admin><Areport /></Admin></ProtectedRoute>} />
-          <Route path="/aalert" element={<ProtectedRoute role="Admin"><Admin><Aalert /></Admin></ProtectedRoute>} />
+          <Route path="/adashboard" element={<ProtectedRoute role={["Admin"]}><Admin><Adashboard /></Admin></ProtectedRoute>} />
+          <Route path="/ausermanage" element={<ProtectedRoute role={["Admin"]}><Admin><Ausermanage /></Admin></ProtectedRoute>} />
+          <Route path="/amaterial" element={<ProtectedRoute role={["Admin","Manager","Staff"]}><RoleLayout>
+          <Amaterial /> </RoleLayout></ProtectedRoute>} />
+          <Route path="/asupplier" element={<ProtectedRoute role={["Admin"]}><Admin><Asupplier /></Admin></ProtectedRoute>} />
+          <Route path="/aproduction" element={<ProtectedRoute role={["Admin","Manager","Staff"]}><RoleLayout><Aproduction /></RoleLayout></ProtectedRoute>} />
+          <Route path="/ainventory" element={<ProtectedRoute role={["Admin","Manager","Staff"]}> <RoleLayout><Ainventory /> </RoleLayout></ProtectedRoute>} />
+          <Route path="/areport" element={<ProtectedRoute role={["Admin","Manager"]}><RoleLayout><Areport /></RoleLayout></ProtectedRoute>} />
+          <Route path="/aalert" element={<ProtectedRoute role={["Admin","Manager","Staff"]}><RoleLayout><Aalert /></RoleLayout></ProtectedRoute>} />
 
           {/* Manager */}
           <Route path="/mdashboard" element={<ProtectedRoute role="Manager"><Manager><Mdashboard /></Manager></ProtectedRoute>} />
-          <Route path="/mmaterial" element={<ProtectedRoute role="Manager"><Manager><Mmaterial /></Manager></ProtectedRoute>} />
-          <Route path="/mproduction" element={<ProtectedRoute role="Manager"><Manager><Mproduction /></Manager></ProtectedRoute>} />
-          <Route path="/minventory" element={<ProtectedRoute role="Manager"><Manager><Minventory /></Manager></ProtectedRoute>} />
-          <Route path="/mreport" element={<ProtectedRoute role="Manager"><Manager><Mreport /></Manager></ProtectedRoute>} />
-          <Route path="/malert" element={<ProtectedRoute role="Manager"><Manager><Malert /></Manager></ProtectedRoute>} />
+          {/* <Route path="/mmaterial" element={<ProtectedRoute role="Manager"><Manager><Mmaterial /></Manager></ProtectedRoute>} /> */}
+          {/* <Route path="/mproduction" element={<ProtectedRoute role="Manager"><Manager><Mproduction /></Manager></ProtectedRoute>} /> */}
+          {/* <Route path="/minventory" element={<ProtectedRoute role="Manager"><Manager><Minventory /></Manager></ProtectedRoute>} /> */}
+          {/* <Route path="/mreport" element={<ProtectedRoute role="Manager"><Manager><Mreport /></Manager></ProtectedRoute>} /> */}
+          {/* <Route path="/malert" element={<ProtectedRoute role="Manager"><Manager><Malert /></Manager></ProtectedRoute>} /> */}
 
           {/* Staff */}
           <Route path="/sdashboard" element={<ProtectedRoute role="Staff"><Staff><Sdashboard /></Staff></ProtectedRoute>} />
-          <Route path="/smaterial" element={<ProtectedRoute role="Staff"><Staff><Smaterial /></Staff></ProtectedRoute>} />
-          <Route path="/sproduction" element={<ProtectedRoute role="Staff"><Staff><Sproduction /></Staff></ProtectedRoute>} />
-          <Route path="/sinventory" element={<ProtectedRoute role="Staff"><Staff><Sinventory /></Staff></ProtectedRoute>} />
-          <Route path="/salert" element={<ProtectedRoute role="Staff"><Staff><Salert /></Staff></ProtectedRoute>} />
+          {/* <Route path="/smaterial" element={<ProtectedRoute role="Staff"><Staff><Smaterial /></Staff></ProtectedRoute>} /> */}
+          {/* <Route path="/sproduction" element={<ProtectedRoute role="Staff"><Staff><Sproduction /></Staff></ProtectedRoute>} /> */}
+          {/* <Route path="/sinventory" element={<ProtectedRoute role="Staff"><Staff><Sinventory /></Staff></ProtectedRoute>} /> */}
+          {/* <Route path="/salert" element={<ProtectedRoute role="Staff"><Staff><Salert /></Staff></ProtectedRoute>} /> */}
         </Routes>
       </AuthProvider>
     </Router>

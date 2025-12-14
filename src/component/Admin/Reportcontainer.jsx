@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
+import { useAuth } from '../../AuthContext'
 
 export default function Reportcontainer() {
+  
+    // getting role for conditional rendering
+     const { user } = useAuth();
+     const role = user?.role;
+   
+
   const [reportForm, setReportForm] = useState({
     reportType: 'Production Output',
     fromDate: '',
@@ -170,35 +177,6 @@ export default function Reportcontainer() {
         <h1 className="text-2xl font-semibold text-gray-900 mb-6">Reports & Dashboard</h1>
         <p className="text-gray-600 mb-8">View production, material, supplier, and inventory reports.</p>
 
-        {/* Generate Custom Report */}
-        <div className="bg-white rounded-lg shadow p-3 mb-4">
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">Generate Custom Report</h2>
-          <form onSubmit={handleFormSubmit} className="flex flex-col sm:flex-row gap-2 items-end">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Report Type</label>
-              <select 
-                value={reportForm.reportType} 
-                onChange={(e)=>handleInputChange('reportType',e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7] text-sm">
-                <option value="Production Output">Production Output</option>
-                <option value="Material Usage">Material Usage</option>
-                <option value="Supplier Info">Supplier Info</option>
-                <option value="Inventory Status">Inventory Status</option>
-              </select>
-            </div>
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
-              <input type="date" value={reportForm.fromDate} onChange={(e)=>handleInputChange('fromDate', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7] text-sm"/>
-            </div>
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
-              <input type="date" value={reportForm.toDate} onChange={(e)=>handleInputChange('toDate', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7] text-sm"/>
-            </div>
-            <button type="submit" className="bg-[#6C5CE7] hover:bg-[#5949D5] text-white px-4 py-2 rounded-md font-semibold text-sm">Generate</button>
-          </form>
-        </div>
 
         {/* Existing Reports Header */}
         <div className="flex justify-between items-center mb-4">
@@ -233,7 +211,9 @@ export default function Reportcontainer() {
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Quantity</th>
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Material Quantity</th>
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Unit</th>
+                  {(role === "Admin") && (
                   <th className="px-6 py-3 text-center text-sm font-medium">Actions</th>
+                  )}
                 </>}
                 {activeTab==='material' && <>
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Material</th>
@@ -241,7 +221,9 @@ export default function Reportcontainer() {
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Min Required</th>
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Unit</th>
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Supplier</th>
+                  {(role === "Admin") && (
                   <th className="px-6 py-3 text-center text-sm font-medium">Actions</th>
+                  )}
                 </>}
                 {activeTab==='inventory' && <>
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Item</th>
@@ -249,7 +231,9 @@ export default function Reportcontainer() {
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Minimum Required</th>
 
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Unit</th>
+                  {(role === "Admin") && (
                   <th className="px-6 py-3 text-center text-sm font-medium">Actions</th>
+                  )}
                 </>}
                 {activeTab==='supplier' && <>
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Supplier</th>
@@ -257,7 +241,9 @@ export default function Reportcontainer() {
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Material</th>
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Quantity</th>
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Unit</th>
+                  {(role === "Admin") && (
                   <th className="px-6 py-3 text-center text-sm font-medium">Actions</th>
+                  )}
                 </>}
               </tr>
             </thead>
@@ -277,6 +263,7 @@ export default function Reportcontainer() {
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.quantity}</td>
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.materialQuantity}</td>
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.unit}</td>
+                    {(role === "Admin") && (
                     <td className="px-6 py-3 text-center text-base font-medium">
                       <button onClick={() => handleDeleteClick(row.id, activeTab)} className="text-red-600 hover:text-red-800 p-1" title="Delete">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -284,6 +271,7 @@ export default function Reportcontainer() {
                         </svg>
                       </button>
                     </td>
+                    )}
                   </>}
 
                   {/* Material */}
@@ -293,6 +281,7 @@ export default function Reportcontainer() {
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.remaining}</td>
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.unit}</td>
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.supplier}</td>
+                    {(role === "Admin") && (
                     <td className="px-6 py-3 text-center text-base font-medium">
                       <button onClick={() => handleDeleteClick(row.id, activeTab)} className="text-red-600 hover:text-red-800 p-1" title="Delete">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -300,6 +289,7 @@ export default function Reportcontainer() {
                         </svg>
                       </button>
                     </td>
+                    )}
                   </>}
 
                   {/* Inventory */}
@@ -308,6 +298,7 @@ export default function Reportcontainer() {
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.current}</td>
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.min}</td>
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.unit}</td>
+                    {(role === "Admin") && (
                     <td className="px-6 py-3 text-center text-base font-medium">
                       <button onClick={() => handleDeleteClick(row.id, activeTab)} className="text-red-600 hover:text-red-800 p-1" title="Delete">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -315,6 +306,7 @@ export default function Reportcontainer() {
                         </svg>
                       </button>
                     </td>
+                    )}
                   </>}
 
                   {/* Supplier */}
@@ -324,6 +316,7 @@ export default function Reportcontainer() {
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.material}</td>
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.quantity}</td>
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.unit}</td>
+                    {(role === "Admin") && (
                     <td className="px-6 py-3 text-center text-base font-medium">
                       <button onClick={() => handleDeleteClick(row.id, activeTab)} className="text-red-600 hover:text-red-800 p-1" title="Delete">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -331,6 +324,7 @@ export default function Reportcontainer() {
                         </svg>
                       </button>
                     </td>
+                    )}
                   </>}
 
                 </tr>

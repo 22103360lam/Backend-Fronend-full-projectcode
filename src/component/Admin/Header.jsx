@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../AuthContext';
 
 export default function Header() {
   const [showDropdown, setShowDropdown] = useState(false);
   const navigate = useNavigate();
+  const {logout} = useAuth();
 
   const handleLogout = () => {
     // Optional: clear session storage, local storage, or cookies here
     // localStorage.clear();
-    navigate('/'); // redirect to login page
+    // navigate('/'); // redirect to login page
+    logout();
   };
 
   return (

@@ -76,9 +76,9 @@ export default function Mnav() {
           
           {/* Raw Materials */}
           <Link 
-            to="/mmaterial" 
+            to="/amaterial" 
             onClick={() => setSidebarOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-md ${isActive("/mmaterial")}`}>
+            className={`flex items-center gap-3 px-3 py-2 rounded-md ${isActive("/amaterial")}`}>
             <div className="w-5 h-5">
               <img src="/asset/nav-box-minimalistic-svgrepo-com.svg" alt="Raw Materials" className="w-5 h-5" />
             </div>
@@ -87,9 +87,9 @@ export default function Mnav() {
           
           {/* Production */}
           <Link 
-            to="/mproduction" 
+            to="/aproduction" 
             onClick={() => setSidebarOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-md ${isActive("/mproduction")}`}>
+            className={`flex items-center gap-3 px-3 py-2 rounded-md ${isActive("/aproduction")}`}>
             <div className="w-5 h-5">
               <img src="/asset/nav-production-factory-svgrepo-com.svg" alt="Production" className="w-5 h-5" />
             </div>
@@ -98,9 +98,9 @@ export default function Mnav() {
           
           {/* Inventory */}
           <Link 
-            to="/minventory" 
+            to="/ainventory" 
             onClick={() => setSidebarOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-md ${isActive("/minventory")}`}>
+            className={`flex items-center gap-3 px-3 py-2 rounded-md ${isActive("/ainventory")}`}>
             <div className="w-5 h-5">
               <img src="/asset/nav-inventor-1-svgrepo-com.svg" alt="Inventory" className="w-5 h-5" />
             </div>
@@ -109,9 +109,9 @@ export default function Mnav() {
 
           {/* Reports */}
           <Link 
-            to="/mreport" 
+            to="/areport" 
             onClick={() => setSidebarOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-md ${isActive("/mreport")}`}>
+            className={`flex items-center gap-3 px-3 py-2 rounded-md ${isActive("/areport")}`}>
             <div className="w-5 h-5">
               <img src="/asset/nav-report-list-svgrepo-com.svg" alt="Inventory" className="w-5 h-5" />
             </div>
@@ -120,9 +120,9 @@ export default function Mnav() {
           
           {/* Alerts */}
           <Link 
-            to="/malert" 
+            to="/aalert" 
             onClick={() => setSidebarOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-md ${isActive("/malert")}`}>
+            className={`flex items-center gap-3 px-3 py-2 rounded-md ${isActive("/aalert")}`}>
             <div className="w-5 h-5">
               <img src="/asset/nav-ring-svgrepo-com.svg" alt="Alerts" className="w-5 h-5" />
             </div>

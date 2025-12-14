@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Addinventory from '../Adminpages/Addinventory';
+import { useAuth } from '../../AuthContext';
 
 // Axios base URL pointing to your Laravel API
 axios.defaults.baseURL = 'http://localhost:8000/api';
 
 export default function Inventorycontainer() {
+
+  // getting role for conditional rendering
+  const { user } = useAuth();
+  const role = user?.role;
+
   const [inventory, setInventory] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -125,12 +131,14 @@ export default function Inventorycontainer() {
             <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Inventory / Finished Goods</h1>
             <p className="text-gray-600 mt-1">View current inventory levels and product availability status.</p>
           </div>
+          {(role === "Admin") && (
           <button
             onClick={() => openModal(null)}
             className="bg-[#6C5CE7] hover:bg-[#5949D5] text-white font-semibold py-2 px-4 rounded-md text-base flex items-center space-x-2"
           >
             <span>Add Inventory</span>
           </button>
+          )}
         </div>
 
         {/* Summary Cards */}
@@ -174,7 +182,9 @@ export default function Inventorycontainer() {
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Minimum Required</th>
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Unit</th>
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Status</th>
+                {(role === "Admin") && (
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Actions</th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -195,7 +205,9 @@ export default function Inventorycontainer() {
                       'bg-green-100 text-green-800'
                     }`}>{item.status}</span>
                   </td>
-                  <td className="px-6 py-3 text-center">
+                  
+                    {(role === "Admin") && (
+                      <td className="px-6 py-3 text-center">
                     <div className="inline-flex items-center gap-2">
                       {/* If this row comes from production (no inventory id), show Save button */}
                       {(!item.id || item.source === 'production') ? (
@@ -213,7 +225,9 @@ export default function Inventorycontainer() {
                         </>
                       )}
                     </div>
+                    
                   </td>
+                    )}
                 </tr>
               ))}
             </tbody>

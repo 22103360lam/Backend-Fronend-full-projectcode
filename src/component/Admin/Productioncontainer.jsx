@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useAuth } from '../../AuthContext';
 
 export default function Productioncontainer() {
+   // getting role for conditional rendering
+    const { user } = useAuth();
+    const role = user?.role;
+
   // ===== State =====
-   
   const [filterStatus, setFilterStatus] = useState("All"); // FILTER STATE (ONLY NEW)
   const [batches, setBatches] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -249,7 +253,8 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
     <div className="p-4 md:p-6 bg-[#eff1f9] space-y-6 min-h-screen">
       <h1 className="text-2xl font-bold text-[#000000]">Production Planning</h1>
 
-      {/* Create Batch */}
+      {/* Create Batch   and role based rendaring */}
+        {(role === "Admin" || role === "Manager" ) && (
       <div className="space-y-2">
         <h2 className="text-lg font-semibold text-[#000000]">Create Batch</h2>
         <form className="flex flex-col md:flex-row gap-2 items-end" onSubmit={handleBatchSubmit}>
@@ -280,8 +285,12 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
           </div>
         </form>
       </div>
+        )}
+      
 
+       
       {/* Assign Tasks */}
+       {(role === "Admin" || role === "Manager" ) && (
       <div className="space-y-2">
         <h2 className="text-lg font-semibold text-[#000000]">Assign Tasks</h2>
         <form className="flex flex-col md:flex-row gap-2 items-end w-full" onSubmit={handleTaskSubmit}>
@@ -335,6 +344,7 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
               required
             />
           </div>
+        
 
           {/* Assign User */}
           <div className="flex flex-col gap-1 flex-1">
@@ -363,8 +373,10 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
           <button type="submit" className={buttonClass}>{editTask ? 'Update' : 'Assign'}</button>
         </form>
       </div>
+       )}
 
       {/* Assign Material */}
+       {(role === "Admin" || role === "Manager" ) && (
       <div className="space-y-2">
         <h2 className="text-lg font-semibold text-[#000000]">Assign Material</h2>
         <form className="flex flex-col md:flex-row gap-2 items-end w-full" onSubmit={handleMaterialSubmit}>
@@ -432,11 +444,13 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
           <button type="submit" className={buttonClass}>Assign</button>
         </form>
       </div>
+       )}
+        
 
       {/* Track Progress Table */}
       <div className="space-y-2">
          <div className="flex items-center justify-between"> 
-    <h2 className="text-lg font-semibold text-[#000000]">
+       <h2 className="text-lg font-semibold text-[#000000]">
       Track Progress
     </h2>
     <select
@@ -469,7 +483,9 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Assign Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Due Date</th>
+                 {(role === "Admin"  ) && (
                 <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider">Actions</th>
+                 )}
               </tr>
             </thead>
             <tbody>
@@ -495,7 +511,8 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
                     }`}>{task.status}</span>
                   </td>
                   <td className="px-6 py-3 whitespace-nowrap">{task.dueDate}</td>
-                  <td className="px-6 py-3 text-center">
+                   {(role === "Admin" ) && (
+                   <td className="px-6 py-3 text-center">
                     <div className="inline-flex items-center gap-2">
                       <button onClick={() => handleEditTask(task)} className="p-1 rounded-full hover:bg-blue-50">
                         <img src="asset/edit.png" alt="Edit" className="w-4 h-4"/>
@@ -505,6 +522,7 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
                       </button>
                     </div>
                   </td>
+                   )}
                 </tr>
               ))}
             </tbody>

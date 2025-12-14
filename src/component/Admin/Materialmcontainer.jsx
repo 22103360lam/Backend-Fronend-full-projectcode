@@ -1,13 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import AddMaterial from '../Adminpages/AddMaterial';
+import { useAuth } from '../../AuthContext';
 
 export default function MaterialMainContainer() {
+
+  // getting role for conditional rendering
+  const { user } = useAuth();
+  const role = user?.role;
+
   const [showModal, setShowModal] = useState(false);
   const [editMaterial, setEditMaterial] = useState(null);
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  //pagination  item show in page
   const itemsPerPage = 5;
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -70,12 +77,15 @@ export default function MaterialMainContainer() {
       <section className="p-4 md:p-6 bg-[#eff1f9] min-h-screen">
         <div className="flex justify-between mb-4">
           <h1 className="text-2xl font-semibold text-gray-900">Raw Material Management</h1>
+              {/*  Admin*/}
+      {(role === "Admin") && (
           <button onClick={handleAdd} className="bg-[#6C5CE7] hover:bg-[#5949D5] text-white font-semibold py-2 px-4 rounded-md flex items-center space-x-2 text-base">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
               <path d="M12 4v16m8-8H4" />
             </svg>
             <span>Add Material</span>
           </button>
+      )}
         </div>
 
         <p className="text-gray-600 text-base mb-6">Track, View Material and Alerts</p>
@@ -122,7 +132,9 @@ export default function MaterialMainContainer() {
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Unit</th>
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Supplier</th>
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Status</th>
+                {(role === "Admin") && (
                 <th className="px-6 py-3 text-right text-sm font-medium uppercase tracking-wider">Actions</th>
+                )}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -138,6 +150,7 @@ export default function MaterialMainContainer() {
                       {material.status || (material.quantity < material.min_required ? "Low Stock" : "In Stock")}
                     </span>
                   </td>
+                  {(role === "Admin") && (
                   <td className="px-6 py-3 text-right text-base font-medium">
                     <div className="inline-flex items-center gap-2">
                       <button onClick={() => handleEdit(material)} className="p-1 rounded-full hover:bg-blue-50">
@@ -148,6 +161,7 @@ export default function MaterialMainContainer() {
                       </button>
                     </div>
                   </td>
+                  )}
                 </tr>
               ))}
             </tbody>

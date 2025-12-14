@@ -74,7 +74,7 @@ export default function Nav() {
 
           {/* Raw Materials */}
           <Link
-            to="/smaterial"
+            to="/amaterial"
             onClick={() => setSidebarOpen(false)}
             className={`flex items-center gap-3 px-3 py-2 rounded-md ${isActive("/smaterial")}`}>
             <div className="w-5 h-5">
@@ -85,9 +85,9 @@ export default function Nav() {
 
           {/* Production */}
           <Link
-            to="/sproduction"
+            to="/aproduction"
             onClick={() => setSidebarOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-md ${isActive("/sproduction")}`}>
+            className={`flex items-center gap-3 px-3 py-2 rounded-md ${isActive("/aproduction")}`}>
             <div className="w-5 h-5">
               <img src="/asset/nav-production-factory-svgrepo-com.svg" alt="Production" className="w-5 h-5" />
             </div>
@@ -96,9 +96,9 @@ export default function Nav() {
 
           {/* Inventory */}
           <Link
-            to="/sinventory"
+            to="/ainventory"
             onClick={() => setSidebarOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-md ${isActive("/sinventory")}`}>
+            className={`flex items-center gap-3 px-3 py-2 rounded-md ${isActive("/ainventory")}`}>
             <div className="w-5 h-5">
               <img src="/asset/nav-inventor-1-svgrepo-com.svg" alt="Inventory" className="w-5 h-5" />
             </div>
@@ -107,9 +107,9 @@ export default function Nav() {
 
           {/* Alerts */}
           <Link
-            to="/salert"
+            to="/aalert"
             onClick={() => setSidebarOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-md ${isActive("/salert")}`}>
+            className={`flex items-center gap-3 px-3 py-2 rounded-md ${isActive("/aalert")}`}>
             <div className="w-5 h-5">
               <img src="/asset/nav-ring-svgrepo-com.svg" alt="Alerts" className="w-5 h-5" />
             </div>
