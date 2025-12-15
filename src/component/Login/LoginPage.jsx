@@ -61,8 +61,8 @@ export default function LoginPage() {
       // Role-based redirect
       const role = response.data.role;
       if (role === "Admin") navigate("/adashboard");
-      else if (role === "Manager") navigate("/mdashboard");
-      else if (role === "Staff") navigate("/sdashboard");
+      else if (role === "Manager") navigate("/adashboard");
+      else if (role === "Staff") navigate("/adashboard");
       else alert("Role not recognized");
 
     } catch (error) {

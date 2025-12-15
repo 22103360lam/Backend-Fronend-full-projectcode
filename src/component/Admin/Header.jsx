@@ -5,14 +5,20 @@ import { useAuth } from '../../AuthContext';
 export default function Header() {
   const [showDropdown, setShowDropdown] = useState(false);
   const navigate = useNavigate();
-  const {logout} = useAuth();
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
-    // Optional: clear session storage, local storage, or cookies here
-    // localStorage.clear();
-    // navigate('/'); // redirect to login page
     logout();
   };
+
+  const displayName = user?.name || user?.email || 'User';
+  const roleLabel = user?.role || 'User';
+  const initials = displayName
+    .split(' ')
+    .map(part => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <div>
@@ -20,20 +26,7 @@ export default function Header() {
         {/* User and Notifications */}
         <div className="flex items-center space-x-4 md:space-x-6">
 
-          {/* Notification Button */}
-          <button className="relative hover:text-gray-800">
-            <img
-              src="asset/notification-svgrepo-com.svg"
-              alt="Bell Icon"
-              className="h-6 w-6 md:h-8 md:w-8"
-            />
-            <span className="absolute -top-1 -right-1 flex h-3 w-3">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600 text-white text-[9px] items-center justify-center">
-                1
-              </span>
-            </span>
-          </button>
+        
 
           {/* User Profile Button */}
           <div className="relative">
@@ -42,11 +35,11 @@ export default function Header() {
               className="flex items-center space-x-2"
             >
               <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-[#6C5CE7] text-white flex items-center justify-center font-semibold text-sm">
-                AD
+                {initials}
               </div>
               <div className="hidden sm:block">
-                <div className="text-sm font-semibold text-gray-800">Admin User</div>
-                <div className="text-sm font-semibold text-gray-500">Administrator</div>
+                <div className="text-sm font-semibold text-gray-800">{displayName}</div>
+                <div className="text-sm font-semibold text-gray-500">{roleLabel}</div>
               </div>
             </button>
 

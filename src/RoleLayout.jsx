@@ -1,18 +1,21 @@
+import { Navigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
-import Admin from "./component/Admin/RoleLayout";
-import Manager from "./component/manager/RoleLayout";
-import Staff from "./component/Staff/RoleLayout";
+import Nav from "./component/Admin/Nav";
+import Header from "./component/Admin/Header";
 
-const RoleLayout = ({ children }) => {
+export default function RoleLayout({ children, allowedRoles }) {
   const { user } = useAuth();
+  if (!user) return <div>Loading...</div>;
 
-  if (!user) return null;
+  if (!allowedRoles.includes(user.role)) return <Navigate to="/" replace />;
 
-  if (user.role === "Admin") return <Admin>{children}</Admin>;
-  if (user.role === "Manager") return <Manager>{children}</Manager>;
-  if (user.role === "Staff") return <Staff>{children}</Staff>;
-
-  return null;
-};
-
-export default RoleLayout;
+  return (
+    <div className="flex h-screen bg-gray-50 font-sans relative">
+      <Nav />
+      <main className="flex-1 flex flex-col overflow-y-auto">
+        <Header />
+        {children}
+      </main>
+    </div>
+  );
+}

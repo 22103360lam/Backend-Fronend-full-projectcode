@@ -1,12 +1,79 @@
 import React, { useState } from 'react'
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from '../../AuthContext';
+
 
 export default function Nav() {
+
+ const { user } = useAuth();
+
+if (!user || !user.role) return null;
+
+const role = user.role.trim();
+
+
+
+const navItems = [
+  {
+    label: "Dashboard",
+    path: "/adashboard",
+    icon: "/asset/nav-dashboard-svgrepo-com.svg",
+    roles: ["Admin","Manager", "Staff"],
+  },
+  {
+    label: "User Management",
+    path: "/ausermanage",
+    icon: "/asset/nav-users-group-rounded-svgrepo-com.svg",
+    roles: ["Admin"],
+  },
+  {
+    label: "Raw Materials",
+    path: "/amaterial",
+    icon: "/asset/nav-box-minimalistic-svgrepo-com.svg",
+    roles: ["Admin","Manager","Staff"],
+  },
+  {
+    label: "Suppliers",
+    path: "/asupplier",
+    icon: "/asset/nav-supplier-buy-cart-ecommerce-svgrepo-com.svg",
+    roles: ["Admin"],
+  },
+  {
+    label: "Production",
+    path: "/aproduction",
+    icon: "/asset/nav-production-factory-svgrepo-com.svg",
+    roles: ["Admin","Manager", "Staff"],
+  },
+  {
+    label: "Inventory",
+    path: "/ainventory",
+    icon: "/asset/nav-inventor-1-svgrepo-com.svg",
+    roles: ["Admin","Manager", "Staff"],
+  },
+  {
+    label: "Reports",
+    path: "/areport",
+    icon: "/asset/nav-report-list-svgrepo-com.svg",
+    roles: ["Admin","Manager"],
+  },
+  {
+    label: "Alerts",
+    path: "/aalert",
+    icon: "/asset/nav-ring-svgrepo-com.svg",
+    roles: ["Admin","Manager", "Staff"],
+  },
+];
+
+
+
+
+
+
   const location = useLocation();
-    // sidebar khola ase kina 
+    // sidear open or not
   const [sidebarOpen, setSidebarOpen] = useState(false); 
 
-   //  current path pai 
+   //  current path active class
   const isActive = (path) =>
     location.pathname === path ? "bg-[#6C5CE7] font-bold text-[#ffffff] hover:bg-[#5949D5]  " : "font-semibold text-[#000000] hover:bg-[#5949D5] hover:text-[#ffffff]";
   
@@ -53,108 +120,36 @@ export default function Nav() {
         </button>
         
              <div className="flex items-center justify-start px-5 text-[#083885] font-bold text-lg border-b bg-[#ffffff]" style={{height: '68px'}}>
-  {/* Logo Section */}
-  <div className="flex-shrink-0 flex items-center justify-center px-2">
-    <img 
-      src="/asset/pms_Image_3t8ovs3t8ovs3t8o-removebg-preview.png" 
-      alt="PMS Logo" 
-      className="h-16 w-auto object-contain max-w-none"
-      style={{maxHeight: '60px'}}
-    />
-  </div>
-</div>
+        {/* Logo Section */}
+        <div className="flex-shrink-0 flex items-center justify-center px-2">
+        <img 
+         src="/asset/pms_Image_3t8ovs3t8ovs3t8o-removebg-preview.png" 
+        alt="PMS Logo" 
+        className="h-16 w-auto object-contain max-w-none"
+        style={{maxHeight: '60px'}}
+       />
+          </div>
+        </div>
        
-        <nav className="flex-1 px-4 py-6 space-y-4 text-[#374151] text-base overflow-y-auto">
-          
-          {/* Dashboard */}
-          <Link 
-            to="/adashboard" 
-            onClick={() => setSidebarOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-md  ${isActive("/adashboard")}`}>
-            <div className="w-5 h-5">
-              <img src="/asset/nav-dashboard-svgrepo-com.svg" alt="Dashboard" className="w-5 h-5"/>
-            </div>
-            <span>Dashboard</span>
-          </Link>
-          
-          {/* User Management */}
-          <Link 
-            to="/ausermanage" 
-            onClick={() => setSidebarOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-md  ${isActive("/ausermanage")}`}>
-            <div className="w-5 h-5">
-              <img src="/asset/nav-users-group-rounded-svgrepo-com.svg" alt="User Management" className="w-5 h-5"/>
-            </div>
-            <span>User Management</span>
-          </Link>
-          
-          {/* Raw Materials */}
-          <Link 
-            to="/amaterial" 
-            onClick={() => setSidebarOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-md  ${isActive("/amaterial")}`}>
-            <div className="w-5 h-5">
-              <img src="/asset/nav-box-minimalistic-svgrepo-com.svg" alt="Raw Materials" className="w-5 h-5"/>
-            </div>
-            <span>Raw Materials</span>
-          </Link>
-          
-          {/* Suppliers */}
-          <Link 
-            to="/asupplier" 
-            onClick={() => setSidebarOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-md  ${isActive("/asupplier")}`}>
-            <div className="w-5 h-5">
-              <img src="/asset/nav-supplier-buy-cart-ecommerce-svgrepo-com.svg" alt="Suppliers" className="w-5 h-5"/>
-            </div>
-            <span>Suppliers</span>
-          </Link>
-          
-          {/* Production */}
-          <Link 
-            to="/aproduction" 
-            onClick={() => setSidebarOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-md  ${isActive("/aproduction")}`}>
-            <div className="w-5 h-5">
-              <img src="/asset/nav-production-factory-svgrepo-com.svg" alt="Production" className="w-5 h-5"/>
-            </div>
-            <span>Production</span>
-          </Link>
-          
-          {/* Inventory */}
-          <Link 
-            to="/ainventory" 
-            onClick={() => setSidebarOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-md  ${isActive("/ainventory")}`}>
-            <div className="w-5 h-5">
-              <img src="/asset/nav-inventor-1-svgrepo-com.svg" alt="Inventory" className="w-5 h-5"/>
-            </div>
-            <span>Inventory</span>
-          </Link>
-          
-          {/* Reports */}
-          <Link 
-            to="/areport" 
-            onClick={() => setSidebarOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-md  ${isActive("/areport")}`}>
-            <div className="w-5 h-5">
-              <img src="/asset/nav-report-list-svgrepo-com.svg" alt="Reports" className="w-5 h-5"/>
-            </div>
-            <span>Reports</span>
-          </Link>
-          
-          {/* Alerts */}
-          <Link 
-            to="/aalert" 
-            onClick={() => setSidebarOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-md  ${isActive("/aalert")}`}>
-            <div className="w-5 h-5">
-              <img src="/asset/nav-ring-svgrepo-com.svg" alt="Alerts" className="w-5 h-5" />
-            </div>
-            <span>Alerts</span>
-          </Link>
-          
-        </nav>
+      <nav className="flex-1 px-4 py-6 space-y-4 text-[#374151] text-base overflow-y-auto">
+       {navItems
+         .filter(item => item.roles.includes(role))
+         .map(item => (
+          <Link
+        key={item.path}
+        to={item.path}
+        onClick={() => setSidebarOpen(false)}
+        className={`flex items-center gap-3 px-3 py-2 rounded-md ${isActive(item.path)}`}
+      >
+        <div className="w-5 h-5">
+          <img src={item.icon} alt={item.label} className="w-5 h-5" />
+        </div>
+        <span>{item.label}</span>
+      </Link>
+    ))}
+</nav>
+
+
       </aside>
       
     </div>
