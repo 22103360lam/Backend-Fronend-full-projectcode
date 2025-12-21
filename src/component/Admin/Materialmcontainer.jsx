@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import AddMaterial from '../Adminpages/AddMaterial';
 import { useAuth } from '../../AuthContext';
@@ -13,6 +13,8 @@ export default function MaterialMainContainer() {
   const [editMaterial, setEditMaterial] = useState(null);
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [supplierList, setSupplierList] = useState([]);
+  const [filters, setFilters] = useState({ supplier: '', status: '' });
 
   //pagination  item show in page
   const itemsPerPage = 5;
@@ -20,6 +22,7 @@ export default function MaterialMainContainer() {
 
   useEffect(() => {
     fetchMaterials();
+    fetchSuppliers();
   }, []);
 
   const fetchMaterials = async () => {
@@ -31,6 +34,17 @@ export default function MaterialMainContainer() {
       alert('Failed to fetch materials');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSuppliers = async () => {
+    try {
+      const res = await axios.get('http://127.0.0.1:8000/api/suppliers');
+      const list = Array.isArray(res.data) ? res.data : res.data?.data ?? [];
+      setSupplierList(list);
+    } catch (err) {
+      console.error('Failed to fetch suppliers', err);
+      setSupplierList([]);
     }
   };
 
@@ -59,11 +73,24 @@ export default function MaterialMainContainer() {
   };
 
   // Pagination
-  const totalPages = Math.ceil(materials.length / itemsPerPage);
+  const filteredMaterials = useMemo(() => {
+    return materials.filter(m => {
+      if (filters.supplier) {
+        const supplierName = (m.supplier ?? m.supplier_name ?? m.company_name ?? '').toString();
+        if (supplierName !== filters.supplier) return false;
+      }
+      if (filters.status) {
+        if ((m.status ?? '').toLowerCase() !== filters.status.toLowerCase()) return false;
+      }
+      return true;
+    });
+  }, [materials, filters]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredMaterials.length / itemsPerPage));
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentMaterials = materials.slice(indexOfFirstItem, indexOfLastItem);
-  const goToPage = (page) => setCurrentPage(page);
+  const currentMaterials = filteredMaterials.slice(indexOfFirstItem, indexOfLastItem);
+  const goToPage = (page) => setCurrentPage(Math.min(Math.max(1, page), totalPages));
 
   if (loading) return <p className="p-4">Loading materials...</p>;
 
@@ -117,6 +144,42 @@ export default function MaterialMainContainer() {
                 <p className="text-xl font-bold">{suppliersCount}</p>
               </div>
               <img src="/asset/factory-svgrepo-com (1).svg" alt="suppliers" className="h-12 w-12 opacity-80" />
+            </div>
+          </div>
+        </div>
+
+        {/* Filters (top-right) */}
+        <div className="mb-4">
+          <div className="flex justify-end">
+            <div className="flex items-center gap-3">
+              <select
+                value={filters.supplier}
+                onChange={e => { setFilters(f => ({ ...f, supplier: e.target.value })); setCurrentPage(1); }}
+                className="px-3 py-2 border rounded-md bg-white"
+              >
+                <option value="">All Suppliers</option>
+                {supplierList.map(s => {
+                  const name = s.supplier ?? s.supplier_name ?? s.name ?? s.company_name ?? `Supplier ${s.id}`;
+                  return <option key={s.id ?? name} value={name}>{name}</option>;
+                })}
+              </select>
+
+              <select
+                value={filters.status}
+                onChange={e => { setFilters(f => ({ ...f, status: e.target.value })); setCurrentPage(1); }}
+                className="px-3 py-2 border rounded-md bg-white"
+              >
+                <option value="">All Status</option>
+                <option value="In Stock">In Stock</option>
+                <option value="Low Stock">Low Stock</option>
+              </select>
+
+              <button
+                onClick={() => { setFilters({ supplier: '', status: '' }); setCurrentPage(1); }}
+                className="px-3 py-2 border rounded-md bg-gray-100"
+              >
+                Clear
+              </button>
             </div>
           </div>
         </div>
