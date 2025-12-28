@@ -6,6 +6,7 @@ export default function Suppliercontainer() {
   const [showModal, setShowModal] = useState(false);
   const [editSupplier, setEditSupplier] = useState(null);
   const [suppliers, setSuppliers] = useState([]);
+  const [filterSupplier, setFilterSupplier] = useState('All');
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
@@ -25,11 +26,22 @@ export default function Suppliercontainer() {
     fetchSuppliers();
   }, []);
 
+  // Filter by supplier name
+  const filteredSuppliers = suppliers.filter(s => {
+    if (filterSupplier === 'All') return true;
+    return (s.supplier || '').toLowerCase() === filterSupplier.toLowerCase();
+  });
+
+  // Unique supplier names for dropdown
+  const supplierOptions = ['All', ...Array.from(new Set(
+    suppliers.map(s => s.supplier || '').filter(Boolean)
+  ))];
+
   // 🔹 Pagination
   const indexOfLastSupplier = currentPage * itemsPerPage;
   const indexOfFirstSupplier = indexOfLastSupplier - itemsPerPage;
-  const currentSuppliers = suppliers.slice(indexOfFirstSupplier, indexOfLastSupplier);
-  const totalPages = Math.ceil(suppliers.length / itemsPerPage);
+  const currentSuppliers = filteredSuppliers.slice(indexOfFirstSupplier, indexOfLastSupplier);
+  const totalPages = Math.ceil(filteredSuppliers.length / itemsPerPage);
 
   const goToPage = (pageNumber) => setCurrentPage(pageNumber);
 
@@ -174,6 +186,18 @@ export default function Suppliercontainer() {
         </div>
 
         {/* Suppliers Table */}
+        <div className="flex justify-end mb-3">
+          <select
+            value={filterSupplier}
+            onChange={e => { setFilterSupplier(e.target.value); setCurrentPage(1); }}
+            className="px-4 py-2 border border-gray-300 rounded-md bg-white text-sm focus:outline-none "
+          >
+            {supplierOptions.map((s, i) => (
+              <option key={i} value={s}>{s === 'All' ? 'All Suppliers' : s}</option>
+            ))}
+          </select>
+        </div>
+
         <div className="bg-white rounded-lg shadow overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 text-base">
             <thead className="text-white" style={{ background: "linear-gradient(135deg, #8E7DFF, #6C5CE7)" }}>
