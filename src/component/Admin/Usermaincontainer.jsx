@@ -89,8 +89,12 @@ export default function UserMainContainer() {
         <button
           onClick={() => openModal()}
           className="bg-[#6C5CE7] hover:bg-[#5949D5] text-white font-semibold py-2 px-4 rounded-md flex items-center space-x-2"
+          
         >
-          Add User
+           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+              <path d="M12 4v16m8-8H4" />
+            </svg>
+         <span>Add User</span> 
         </button>
       </div>
 

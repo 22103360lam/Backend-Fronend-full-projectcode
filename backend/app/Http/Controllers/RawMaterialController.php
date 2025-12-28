@@ -11,7 +11,7 @@ class RawMaterialController extends Controller
     public function index()
     {
         return response()->json(
-            RawMaterial::select('id', 'material_name', 'quantity', 'min_required', 'unit', 'supplier', 'status')
+            RawMaterial::select('id', 'material_name', 'quantity', 'min_required', 'unit', 'supplier', 'status', 'created_at')
                         ->get()
         );
     }

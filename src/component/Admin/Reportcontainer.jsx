@@ -40,6 +40,7 @@ export default function Reportcontainer() {
             quantity: item.quantity || 0,
             materialQuantity: item.material_quantity || 0,
             unit: item.unit || '-'
+            ,date: item.assign_date || item.date || item.created_at || item.updated_at || ''
           })))
           break
         }
@@ -56,6 +57,7 @@ export default function Reportcontainer() {
               || item.supplier?.name
               || item.supplier
               || '-'
+            ,date: item.date || item.created_at || item.received_at || item.purchase_date || ''
           })))
           break
         }
@@ -67,6 +69,7 @@ export default function Reportcontainer() {
             current: item.quantity || 0,
             min: item.minimum_required || 0,
             unit: item.unit || '-'
+            ,date: item.date || item.created_at || item.updated_at || ''
           })))
           break
         }
@@ -83,6 +86,7 @@ export default function Reportcontainer() {
             material: item.material || item.material_name || '-',
             quantity: item.quantity || 0,
             unit: item.unit || '-'
+            ,date: item.date || item.created_at || item.supplied_date || ''
           })))
           break
         }
@@ -153,8 +157,24 @@ export default function Reportcontainer() {
       default: return
     }
     if(currentData.length===0){ alert('No data to download'); return }
-    const headers = Object.keys(currentData[0]).filter(k=>k!=='id')
-    const csvContent = [ headers.join(','), ...currentData.map(r=> headers.map(h=>r[h]).join(',')) ].join('\n')
+
+    // apply date range filter if provided
+    const from = reportForm.fromDate || ''
+    const to = reportForm.toDate || ''
+    let filtered = currentData
+    if(from || to){
+      filtered = currentData.filter(r => {
+        const d = (r.date || '').toString().slice(0,10)
+        if(!d) return false
+        if(from && to) return d >= from && d <= to
+        if(from) return d >= from
+        return d <= to
+      })
+    }
+    if(filtered.length===0){ alert('No data in selected date range'); return }
+
+    const headers = Object.keys(filtered[0]).filter(k=>k!=='id')
+    const csvContent = [ headers.join(','), ...filtered.map(r=> headers.map(h=> (r[h] ?? '').toString().replace(/,/g, '')) .join(',')) ].join('\n')
     const blob = new Blob([csvContent], {type:'text/csv'})
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -181,12 +201,23 @@ export default function Reportcontainer() {
         {/* Existing Reports Header */}
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-gray-900">Existing Reports</h2>
-          <button onClick={downloadReport} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-semibold flex items-center gap-2 text-sm">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-            </svg>
-            Download Report
-          </button>
+
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-700">From</label>
+            <input type="date" value={reportForm.fromDate} onChange={e=>handleInputChange('fromDate', e.target.value)}
+              className="px-2 py-1 border border-gray-300 rounded-md" />
+
+            <label className="text-sm text-gray-700">To</label>
+            <input type="date" value={reportForm.toDate} onChange={e=>handleInputChange('toDate', e.target.value)}
+              className="px-2 py-1 border border-gray-300 rounded-md" />
+
+            <button onClick={downloadReport} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-semibold flex items-center gap-2 text-sm">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+              Download Report
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -211,6 +242,7 @@ export default function Reportcontainer() {
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Quantity</th>
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Material Quantity</th>
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Unit</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Date</th>
                   {(role === "Admin") && (
                   <th className="px-6 py-3 text-center text-sm font-medium">Actions</th>
                   )}
@@ -221,6 +253,7 @@ export default function Reportcontainer() {
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Min Required</th>
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Unit</th>
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Supplier</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Date</th>
                   {(role === "Admin") && (
                   <th className="px-6 py-3 text-center text-sm font-medium">Actions</th>
                   )}
@@ -231,6 +264,7 @@ export default function Reportcontainer() {
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Minimum Required</th>
 
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Unit</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Date</th>
                   {(role === "Admin") && (
                   <th className="px-6 py-3 text-center text-sm font-medium">Actions</th>
                   )}
@@ -241,6 +275,7 @@ export default function Reportcontainer() {
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Material</th>
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Quantity</th>
                   <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Unit</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Date</th>
                   {(role === "Admin") && (
                   <th className="px-6 py-3 text-center text-sm font-medium">Actions</th>
                   )}
@@ -263,6 +298,7 @@ export default function Reportcontainer() {
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.quantity}</td>
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.materialQuantity}</td>
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.unit}</td>
+                    <td className="px-6 py-3 whitespace-nowrap text-base">{row.date ? row.date.toString().slice(0,10) : '-'}</td>
                     {(role === "Admin") && (
                     <td className="px-6 py-3 text-center text-base font-medium">
                       <button onClick={() => handleDeleteClick(row.id, activeTab)} className="text-red-600 hover:text-red-800 p-1" title="Delete">
@@ -281,6 +317,7 @@ export default function Reportcontainer() {
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.remaining}</td>
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.unit}</td>
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.supplier}</td>
+                    <td className="px-6 py-3 whitespace-nowrap text-base">{row.date ? row.date.toString().slice(0,10) : '-'}</td>
                     {(role === "Admin") && (
                     <td className="px-6 py-3 text-center text-base font-medium">
                       <button onClick={() => handleDeleteClick(row.id, activeTab)} className="text-red-600 hover:text-red-800 p-1" title="Delete">
@@ -298,6 +335,7 @@ export default function Reportcontainer() {
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.current}</td>
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.min}</td>
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.unit}</td>
+                    <td className="px-6 py-3 whitespace-nowrap text-base">{row.date ? row.date.toString().slice(0,10) : '-'}</td>
                     {(role === "Admin") && (
                     <td className="px-6 py-3 text-center text-base font-medium">
                       <button onClick={() => handleDeleteClick(row.id, activeTab)} className="text-red-600 hover:text-red-800 p-1" title="Delete">
@@ -316,6 +354,7 @@ export default function Reportcontainer() {
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.material}</td>
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.quantity}</td>
                     <td className="px-6 py-3 whitespace-nowrap text-base">{row.unit}</td>
+                    <td className="px-6 py-3 whitespace-nowrap text-base">{row.date ? row.date.toString().slice(0,10) : '-'}</td>
                     {(role === "Admin") && (
                     <td className="px-6 py-3 text-center text-base font-medium">
                       <button onClick={() => handleDeleteClick(row.id, activeTab)} className="text-red-600 hover:text-red-800 p-1" title="Delete">

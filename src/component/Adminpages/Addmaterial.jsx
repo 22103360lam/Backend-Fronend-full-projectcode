@@ -79,24 +79,26 @@ export default function AddMaterial({ closeModal, initialData = null, onSave }) 
     try {
       setLoading(true)
 
-      // normalize payload to match your API (use stock_quantity)
+      // normalize payload to match API — include both common keys ('quantity') and 'stock_quantity'
       const qty = Math.max(0, Number(formData.quantity))
       const minReq = Math.max(0, Number(formData.min_required))
       const payload = {
         material_name: formData.material_name,
+        // include both names so server accepts whichever it expects
+        quantity: qty,
         stock_quantity: qty,
         min_required: minReq,
         unit: formData.unit,
-        supplier: formData.supplier, // change to supplier_id if your API expects id
+        supplier: formData.supplier,
         status: formData.status
       }
 
       let response
       if (initialData) {
-        // editing existing item
+        // editing existing item — send normalized payload
         response = await axios.put(`http://127.0.0.1:8000/api/raw-materials/${initialData.id}`, payload)
       } else {
-        // check if same material exists (match by name)
+        // try to merge with existing material (by name)
         const listRes = await axios.get('http://127.0.0.1:8000/api/raw-materials')
         const list = Array.isArray(listRes.data) ? listRes.data : listRes.data?.data ?? []
         const existing = list.find(m =>
@@ -109,6 +111,7 @@ export default function AddMaterial({ closeModal, initialData = null, onSave }) 
           const updatePayload = {
             ...existing,
             material_name: existing.material_name ?? payload.material_name,
+            quantity: newStock,
             stock_quantity: newStock,
             min_required: minReq,
             unit: payload.unit,

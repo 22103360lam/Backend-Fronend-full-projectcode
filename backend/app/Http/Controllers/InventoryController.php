@@ -11,8 +11,8 @@ class InventoryController extends Controller
     // Fetch inventory with dynamic values from Production
     public function index()
     {
-        // keep using Inventory model; fully qualify Production to avoid missing import errors
-        $inventoryCollection = Inventory::all();
+        // fetch inventories including created_at so frontend can show dates
+        $inventoryCollection = Inventory::select(['id','item_name','quantity','minimum_required','unit','status','created_at'])->get();
         $productionData = \App\Models\Production::whereNotNull('task')->get(); // data fetch from production table
 
         $inventoryMap = $inventoryCollection->keyBy(fn($it) => trim((string)($it->item_name ?? $it->name ?? '')));
@@ -26,6 +26,7 @@ class InventoryController extends Controller
                 'unit' => $item->unit ?? 'Piece',
                 'status' => $item->status ?? 'In Stock',
                 'source' => 'inventory',
+                'created_at' => $item->created_at ? $item->created_at->toDateTimeString() : null,
             ];
         })->toArray();
 
@@ -41,6 +42,7 @@ class InventoryController extends Controller
                     'unit' => $prod->unit ?? 'Piece',
                     'status' => $prod->status ?? 'In Stock',
                     'source' => 'production',
+                    'created_at' => $prod->created_at ? $prod->created_at->toDateTimeString() : null,
                 ];
             }
         }

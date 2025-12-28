@@ -9,6 +9,7 @@ export default function Productioncontainer() {
 
   // ===== State =====
   const [filterStatus, setFilterStatus] = useState("All"); // FILTER STATE (ONLY NEW)
+  const [filterDate, setFilterDate] = useState(''); // date filter
   const [batches, setBatches] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [users, setUsers] = useState([]);
@@ -23,7 +24,7 @@ export default function Productioncontainer() {
     status: 'On Track',
     dueDate: ''
   });
-  const [materialForm, setMaterialForm] = useState({ batch: '', material: '', quantity: '', unit: '' });
+  const [materialForm, setMaterialForm] = useState({ batch: '', material: '', quantity: '', unit: '', stock: '' });
   const [editTask, setEditTask] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -88,6 +89,11 @@ const filteredTasks = tasks.filter(t => {
   if (filterStatus === "All") return true;
   if (filterStatus === "Unused") return t.task.toLowerCase() === 'pending';   // only pending
   if (filterStatus === "Used") return t.task && t.task.toLowerCase() !== 'pending'; // anything else
+  if (filterStatus === 'ByDate') {
+    if (!filterDate) return true; // no date chosen -> show all
+    // compare only the date portion (YYYY-MM-DD)
+    return (t.assignDate || '').toString().slice(0, 10) === filterDate;
+  }
   return t.status === filterStatus; // On Track / In Progress / Delayed
 });
 
@@ -192,6 +198,12 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
     try {
       const selectedMaterial = materials.find(m => m.id.toString() === materialForm.material.toString());
 
+      // validate against stock (allow equal or less)
+      const stockVal = Number(selectedMaterial?.stock ?? selectedMaterial?.quantity ?? 0);
+      const assignQty = Number(materialForm.quantity);
+      if (isNaN(assignQty) || assignQty <= 0) return alert('Please enter a valid assign quantity');
+      if (assignQty > stockVal) return alert(`Assign quantity (${assignQty}) cannot exceed stock (${stockVal})`);
+
       const res = await axios.put(`http://127.0.0.1:8000/api/productions/${encodeURIComponent(materialForm.batch)}/material`, {
         material_id: materialForm.material,
         material_name: selectedMaterial?.material_name || '',
@@ -199,6 +211,7 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
         unit: materialForm.unit // <-- send unit
       });
 
+      // update production task in UI
       setTasks(prev => prev.map(t => t.id === res.data.id ? {
         ...t,
         material: res.data.material_id ? res.data.material_id.toString() : '',
@@ -207,7 +220,26 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
         unit: res.data.unit || '' // <-- update unit
       } : t));
 
-      setMaterialForm({ batch: '', material: '', quantity: '', unit: '' });
+      // decrement raw-material stock on server (and update local materials list)
+      try {
+        const newStock = stockVal - assignQty;
+        // send both common keys in case backend expects one of them
+        const updatePayload = { quantity: newStock, stock_quantity: newStock, stock: newStock };
+        await axios.put(`http://127.0.0.1:8000/api/raw-materials/${selectedMaterial.id}`, updatePayload);
+
+        setMaterials(prev => prev.map(m => m.id === selectedMaterial.id ? { ...m, quantity: newStock, stock: newStock } : m));
+
+        // notify other pages/components (raw material page) about update
+        window.dispatchEvent(new CustomEvent('raw-material-updated', {
+          detail: { id: selectedMaterial.id, newStock }
+        }));
+      } catch (matErr) {
+        console.error('Failed to update raw-material stock', matErr);
+        // non-blocking: inform user but keep production assignment
+        alert('Assigned material but failed to update raw-material stock on server.');
+      }
+
+      setMaterialForm({ batch: '', material: '', quantity: '', unit: '', stock: '' });
     } catch (err) {
       console.error(err);
       alert('Failed to assign material');
@@ -229,7 +261,8 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
       batch: task.batch,
       material: task.material,
       quantity: task.materialQuantity,
-      unit: task.unit || ''  // <-- populate unit for editing
+      unit: task.unit || '',  // <-- populate unit for editing
+      stock: task.materialStock || '' // <-- populate stock for editing (if present)
     });
   };
 
@@ -400,12 +433,29 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
             <select
               className="flex-1 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]"
               value={materialForm.material}
-              onChange={e => setMaterialForm({ ...materialForm, material: e.target.value })}
+              onChange={e => {
+                const val = e.target.value;
+                const sel = materials.find(m => m.id.toString() === val.toString());
+                // prefer `quantity` field from raw-materials as stock and store as string
+                setMaterialForm({ ...materialForm, material: val, stock: sel ? String(sel.quantity ?? sel.stock ?? '') : '', quantity: '' });
+              }}
               required
             >
               <option value="">Assign Material</option>
               {materials.map(m => <option key={m.id} value={m.id}>{m.material_name}</option>)}
             </select>
+          </div>
+
+          {/* Stock */}
+          <div className="flex flex-col gap-1 flex-1">
+            <label>Stock</label>
+            <input
+              type="text"
+              readOnly
+              value={materialForm.stock}
+              placeholder="-"
+              className="px-2 py-1 border border-gray-300 rounded-md bg-gray-50"
+            />
           </div>
 
           {/* Quantity */}
@@ -416,7 +466,17 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
               placeholder="Quantity"
               className="px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]"
               value={materialForm.quantity}
-              onChange={e => setMaterialForm({ ...materialForm, quantity: e.target.value })}
+              onChange={e => {
+                // allow only numbers and dot
+                const raw = e.target.value.replace(/[^\d.]/g, '');
+                const stockVal = Number(materialForm.stock || 0);
+                const num = Number(raw);
+                if (stockVal && !isNaN(num) && num > stockVal) {
+                  alert('Not more than stock quantity'); // alert massage
+                  return setMaterialForm({ ...materialForm, quantity: String(stockVal) });
+                }
+                setMaterialForm({ ...materialForm, quantity: raw });
+              }}
               required
             />
           </div>
@@ -449,23 +509,37 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
 
       {/* Track Progress Table */}
       <div className="space-y-2">
-         <div className="flex items-center justify-between"> 
-       <h2 className="text-lg font-semibold text-[#000000]">
-      Track Progress
-    </h2>
-    <select
-  value={filterStatus}
-  onChange={(e) => {
-    setFilterStatus(e.target.value);
-    setCurrentPage(1);
-  }}
-  className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]"
->
-  <option value="All">All</option>
-  <option value="Unused">Unused Batch</option>
-  <option value="Used">Used Batch</option>
-</select>
-  </div>
+          <div className="flex items-center justify-between">
+         <h2 className="text-lg font-semibold text-[#000000]">
+        Track Progress
+      </h2>
+      <div className="flex items-center gap-2">
+        <select
+          value={filterStatus}
+          onChange={(e) => {
+            const val = e.target.value;
+            setFilterStatus(val);
+            setCurrentPage(1);
+            if (val !== 'ByDate') setFilterDate('');
+          }}
+          className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]"
+        >
+          <option value="All">All</option>
+          <option value="Unused">Unused Batch</option>
+          <option value="Used">Used Batch</option>
+          <option value="ByDate">By Date</option>
+        </select>
+         {/* filter by date */}
+        {filterStatus === 'ByDate' && (
+          <input
+            type="date"
+            value={filterDate}
+            onChange={e => { setFilterDate(e.target.value); setCurrentPage(1); }}
+            className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]"
+          />
+        )}
+      </div>
+    </div>
 
 
         

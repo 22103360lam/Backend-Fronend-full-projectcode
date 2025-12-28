@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import Addinventory from '../Adminpages/Addinventory';
 import { useAuth } from '../../AuthContext';
@@ -13,6 +13,7 @@ export default function Inventorycontainer() {
   const role = user?.role;
 
   const [inventory, setInventory] = useState([]);
+  const [filters, setFilters] = useState({ name: '' });
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -106,11 +107,25 @@ export default function Inventorycontainer() {
     }
   };
 
-  // Pagination
+  // unique item names for filter dropdown
+  const uniqueNames = useMemo(() => {
+    return [...new Set(inventory.map(i => (i.item_name ?? '').toString().trim()).filter(Boolean))];
+  }, [inventory]);
+
+  // filtered list used for table/pagination (table only)
+  const filteredInventory = useMemo(() => {
+    if (!filters.name) return inventory;
+    return inventory.filter(i => (i.item_name ?? '').toString() === filters.name);
+  }, [inventory, filters]);
+
+  // reset page when filter changes
+  useEffect(() => { setCurrentPage(1); }, [filters.name]);
+
+  // Pagination (apply to filteredInventory for table)
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = inventory.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(inventory.length / itemsPerPage);
+  const currentItems = filteredInventory.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredInventory.length / itemsPerPage);
 
   const goToPage = (pageNumber) => {
     if (pageNumber < 1 || pageNumber > totalPages) return;
@@ -136,6 +151,9 @@ export default function Inventorycontainer() {
             onClick={() => openModal(null)}
             className="bg-[#6C5CE7] hover:bg-[#5949D5] text-white font-semibold py-2 px-4 rounded-md text-base flex items-center space-x-2"
           >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+              <path d="M12 4v16m8-8H4" />
+            </svg>
             <span>Add Inventory</span>
           </button>
           )}
@@ -173,6 +191,17 @@ export default function Inventorycontainer() {
         </div>
 
         {/* Inventory Table */}
+        <div className="flex items-center justify-end mb-2">
+          <select
+            className="px-3 py-2 border rounded bg-white"
+            value={filters.name}
+            onChange={e => setFilters({ ...filters, name: e.target.value })}
+          >
+            <option value="">All Items</option>
+            {uniqueNames.map(name => <option key={name} value={name}>{name}</option>)}
+          </select>
+        </div>
+
         <div className="bg-white rounded-lg shadow overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="text-white" style={{ background: 'linear-gradient(135deg, #8E7DFF, #6C5CE7)' }}>

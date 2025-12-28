@@ -67,7 +67,7 @@ export default function MaterialMainContainer() {
     if (editMaterial) {
       setMaterials(prev => prev.map(m => m.id === editMaterial.id ? material : m));
     } else {
-      setMaterials(prev => [material, ...prev]); // নতুন material আগে show হবে
+      setMaterials(prev => [material, ...prev]); // new material show first
     }
     closeModal();
   };
