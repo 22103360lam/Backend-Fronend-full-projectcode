@@ -27,6 +27,7 @@ export default function Productioncontainer() {
   const [materialForm, setMaterialForm] = useState({ batch: '', material: '', quantity: '', unit: '', stock: '' });
   const [editTask, setEditTask] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [openStatusMenu, setOpenStatusMenu] = useState(null); // for 3-dot menu
 
   // ===== Pagination =====
   const [currentPage, setCurrentPage] = useState(1);
@@ -84,6 +85,7 @@ export default function Productioncontainer() {
       setLoading(false);
     }
   };
+
   //  FILTER LOGIC (ONLY NEW)
 const filteredTasks = tasks.filter(t => {
   if (filterStatus === "All") return true;
@@ -275,6 +277,95 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
     } catch (err) {
       console.error(err);
       alert('Failed to delete task');
+    }
+  };
+
+  // Add finished task to inventory
+  const addToInventory = async (task) => {
+    try {
+      const itemName = task.task; // Use task name as item name
+      const quantity = Number(task.quantity) || 0;
+
+      if (!itemName || quantity <= 0) {
+        console.log('Invalid task data for inventory');
+        return;
+      }
+
+      // First, check if item already exists in inventory
+      const inventoryRes = await axios.get('http://127.0.0.1:8000/api/inventory');
+      const inventoryItems = Array.isArray(inventoryRes.data) ? inventoryRes.data : [];
+      
+      // Find existing item with same name (case-insensitive)
+      const existingItem = inventoryItems.find(
+        item => (item.item_name || '').toLowerCase().trim() === itemName.toLowerCase().trim()
+      );
+
+      if (existingItem) {
+        // Item exists - update quantity by adding new quantity
+        const newQuantity = Number(existingItem.quantity || 0) + quantity;
+        await axios.put(`http://127.0.0.1:8000/api/inventory/${existingItem.id}`, {
+          item_name: existingItem.item_name,
+          quantity: newQuantity,
+          minimum_required: existingItem.minimum_required || 0,
+          unit: 'Piece',
+          status: newQuantity > (existingItem.minimum_required || 0) ? 'In Stock' : 'Low Stock'
+        });
+        console.log(`Updated inventory: ${itemName} - added ${quantity}, new total: ${newQuantity}`);
+      } else {
+        // Item doesn't exist - create new inventory item
+        await axios.post('http://127.0.0.1:8000/api/inventory', {
+          item_name: itemName,
+          quantity: quantity,
+          minimum_required: 0,
+          unit: 'Piece',
+          status: 'In Stock'
+        });
+        console.log(`Created new inventory item: ${itemName} with quantity: ${quantity}`);
+      }
+
+      // Notify inventory page about update
+      window.dispatchEvent(new CustomEvent('inventory-updated'));
+      
+    } catch (err) {
+      console.error('Failed to add to inventory:', err);
+      alert('Task marked as Finished but failed to update inventory.');
+    }
+  };
+
+  // Handle status change from 3-dot menu
+  const handleStatusChange = async (taskId, newStatus) => {
+    try {
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      const res = await axios.put(
+        `http://127.0.0.1:8000/api/productions/${encodeURIComponent(task.batch)}/task`,
+        {
+          task: task.task,
+          quantity: task.quantity,
+          assigned_user_id: task.assigned_user_id || null,
+          assigned_to: task.assigned_to || '',
+          status: newStatus,
+          due_date: task.dueDate || null
+        }
+      );
+
+      setTasks(prev =>
+        prev.map(t =>
+          t.id === taskId
+            ? { ...t, status: newStatus }
+            : t
+        )
+      );
+      setOpenStatusMenu(null);
+
+      // If status changed to "Finished", add to inventory
+      if (newStatus === 'Finished') {
+        await addToInventory(task);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update status');
     }
   };
 
@@ -571,18 +662,63 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
                 <tr key={task.id} className="border-t border-gray-200 hover:bg-gray-50">
                   <td className="px-6 py-3 whitespace-nowrap">{task.batch}</td>
                   <td className="px-6 py-3 whitespace-nowrap">{task.task}</td>
-                  <td className="px-6 py-3 whitespace-nowrap">{task.quantity}</td>
+                  <td className="px-6 py-3 whitespace-nowrap">{task.quantity}piece</td>
                   <td className="px-6 py-3 whitespace-nowrap">{task.materialName || '-'}</td>
                   <td className="px-6 py-3 whitespace-nowrap">{task.materialQuantity}</td>
                   <td className="px-6 py-3 whitespace-nowrap">{task.unit || '-'}</td>
                   <td className="px-6 py-3 whitespace-nowrap">{task.assigned_to || '-'}</td>
                   <td className="px-6 py-3 whitespace-nowrap">{task.assignDate}</td>
                   <td className="px-6 py-3 whitespace-nowrap">
-                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      task.status === 'On Track' ? 'bg-green-100 text-green-800' :
-                      task.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>{task.status}</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        task.status === 'On Track' ? 'bg-green-100 text-green-800' :
+                        task.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800' :
+                        task.status === 'Finished' ? 'bg-blue-100 text-blue-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>{task.status}</span>
+                      {(role === "Admin" || role === "Manager" || role==="Staff") && task.status !== 'Finished' && (
+                        <div className="relative">
+                          <button
+                            onClick={() => setOpenStatusMenu(openStatusMenu === task.id ? null : task.id)}
+                            className="p-1 rounded-full hover:bg-gray-100 focus:outline-none"
+                          >
+                            <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                              <circle cx="10" cy="4" r="2" />
+                              <circle cx="10" cy="10" r="2" />
+                              <circle cx="10" cy="16" r="2" />
+                            </svg>
+                          </button>
+                          {openStatusMenu === task.id && (
+                            <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                              <button
+                                onClick={() => handleStatusChange(task.id, 'On Track')}
+                                className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                              >
+                                On Track
+                              </button>
+                              <button
+                                onClick={() => handleStatusChange(task.id, 'In Progress')}
+                                className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                              >
+                                In Progress
+                              </button>
+                              <button
+                                onClick={() => handleStatusChange(task.id, 'Delayed')}
+                                className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                              >
+                                Delayed
+                              </button>
+                              <button
+                                onClick={() => handleStatusChange(task.id, 'Finished')}
+                                className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 text-blue-600 font-medium"
+                              >
+                                Finished
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-3 whitespace-nowrap">{task.dueDate}</td>
                    {(role === "Admin" ) && (

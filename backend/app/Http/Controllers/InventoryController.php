@@ -8,46 +8,29 @@ use Illuminate\Support\Facades\Log;
 
 class InventoryController extends Controller
 { 
-    // Fetch inventory with dynamic values from Production
+    // Fetch inventory from inventory table only
     public function index()
     {
-        // fetch inventories including created_at so frontend can show dates
-        $inventoryCollection = Inventory::select(['id','item_name','quantity','minimum_required','unit','status','created_at'])->get();
-        $productionData = \App\Models\Production::whereNotNull('task')->get(); // data fetch from production table
+        try {
+            $inventoryCollection = Inventory::select(['id','item_name','quantity','minimum_required','unit','status','created_at'])->get();
 
-        $inventoryMap = $inventoryCollection->keyBy(fn($it) => trim((string)($it->item_name ?? $it->name ?? '')));
-
-        $result = $inventoryCollection->map(function($item) {
-            return [
-                'id' => $item->id,
-                'item_name' => $item->item_name,
-                'quantity' => $item->quantity ?? 0,
-                'minimum_required' => $item->minimum_required ?? 0,
-                'unit' => $item->unit ?? 'Piece',
-                'status' => $item->status ?? 'In Stock',
-                'source' => 'inventory',
-                'created_at' => $item->created_at ? $item->created_at->toDateTimeString() : null,
-            ];
-        })->toArray();
-
-        foreach ($productionData as $prod) {
-            $taskName = trim((string)($prod->task ?? ''));
-            if ($taskName === '') continue;
-            if (!$inventoryMap->has($taskName)) {
-                $result[] = [
-                    'id' => null,
-                    'item_name' => $taskName,
-                    'quantity' => $prod->quantity ?? 0,
-                    'minimum_required' => 0,
-                    'unit' => $prod->unit ?? 'Piece',
-                    'status' => $prod->status ?? 'In Stock',
-                    'source' => 'production',
-                    'created_at' => $prod->created_at ? $prod->created_at->toDateTimeString() : null,
+            $result = $inventoryCollection->map(function($item) {
+                return [
+                    'id' => $item->id,
+                    'item_name' => $item->item_name,
+                    'quantity' => $item->quantity ?? 0,
+                    'minimum_required' => $item->minimum_required ?? 0,
+                    'unit' => $item->unit ?? 'Piece',
+                    'status' => $item->status ?? 'In Stock',
+                    'created_at' => $item->created_at ? $item->created_at->toDateTimeString() : null,
                 ];
-            }
-        }
+            })->toArray();
 
-        return response()->json($result);
+            return response()->json($result);
+        } catch (\Throwable $e) {
+            Log::error('Inventory index error: ' . $e->getMessage());
+            return response()->json(['message' => 'Failed to fetch inventory'], 500);
+        }
     }
 
     // Create new inventory item

@@ -22,17 +22,34 @@ export default function Inventorycontainer() {
   // Fetch inventory on mount
   useEffect(() => {
     fetchInventory();
+
+    // Listen for inventory updates from production page
+    const handleInventoryUpdate = () => {
+      fetchInventory();
+    };
+    window.addEventListener('inventory-updated', handleInventoryUpdate);
+
+    return () => {
+      window.removeEventListener('inventory-updated', handleInventoryUpdate);
+    };
   }, []);
 
-  // Fetch inventory from API
+  // Fetch inventory from inventory table
   const fetchInventory = async () => {
     try {
       const res = await axios.get('/inventory');
       if (Array.isArray(res.data)) {
-        setInventory(res.data);
-        console.log('Inventory API response:', res.data);
+        const items = res.data.map(item => ({
+          id: item.id,
+          item_name: item.item_name || '',
+          quantity: item.quantity || 0,
+          minimum_required: item.minimum_required || 0,
+          unit: item.unit || 'Piece',
+          status: Number(item.quantity || 0) <= Number(item.minimum_required || 0) && Number(item.minimum_required || 0) > 0 ? 'Low Stock' : 'In Stock',
+        }));
+        setInventory(items);
+        console.log('Inventory data:', items);
       } else {
-        console.error('Unexpected payload:', res.data);
         setInventory([]);
       }
     } catch (error) {
@@ -45,20 +62,25 @@ export default function Inventorycontainer() {
   const openModal = (item = null) => { setSelectedItem(item); setShowModal(true); };
   const closeModal = () => setShowModal(false);
 
-  // Save or update inventory
+  // Save or update inventory in inventory table
   const handleSave = async (item) => {
     try {
+      const quantity = Number(item.quantity ?? 0);
+      const minRequired = Number(item.minimumRequired ?? item.minimum_required ?? 0);
+
       const payload = {
         item_name: item.name ?? item.item_name ?? '',
-        quantity: Number(item.quantity ?? 0),
-        minimum_required: Number(item.minimumRequired ?? item.minimum_required ?? 0),
-        unit: 'Piece', // static per requirement
-        status: item.status ?? 'In Stock',
+        quantity: quantity,
+        minimum_required: minRequired,
+        unit: item.unit || 'Piece',
+        status: quantity <= minRequired && minRequired > 0 ? 'Low Stock' : 'In Stock',
       };
 
       if (item.id) {
+        // Update inventory record
         await axios.put(`/inventory/${item.id}`, payload);
       } else {
+        // Create new inventory record
         await axios.post('/inventory', payload);
       }
 
@@ -70,40 +92,16 @@ export default function Inventorycontainer() {
     }
   };
 
-  // Delete inventory
+  // Delete from inventory table
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this item?')) return;
 
     try {
+      // Delete from inventory table
       await axios.delete(`/inventory/${id}`);
-      setInventory(prev => prev.filter(item => item.id !== id));
-    } catch (error) {
-      console.error('Failed to delete inventory:', error);
-    }
-  };
-
-  // Save a production-derived row into inventories
-  const handleSaveFromProduction = async (prodItem) => {
-    try {
-      // If the production row includes a batch_id, call server-side converter endpoint
-      if (prodItem.batch_id) {
-        await axios.post(`/productions/${prodItem.batch_id}/to-inventory`);
-      } else {
-        const payload = {
-          item_name: prodItem.item_name ?? prodItem.task ?? '',
-          quantity: Number(parseInt((prodItem.quantity ?? '').toString().replace(/[^0-9]/g, '')) || 0),
-          minimum_required: 0,
-          unit: prodItem.unit ?? 'Piece',
-          status: prodItem.status ?? 'In Stock',
-        };
-        await axios.post('/inventory', payload);
-      }
-
       await fetchInventory();
-      alert('Saved production item to inventory');
     } catch (error) {
-      console.error('Failed to save production item to inventory:', error);
-      alert('Failed to save production item — see console.');
+      console.error('Failed to delete from inventory:', error);
     }
   };
 
@@ -151,7 +149,7 @@ export default function Inventorycontainer() {
             onClick={() => openModal(null)}
             className="bg-[#6C5CE7] hover:bg-[#5949D5] text-white font-semibold py-2 px-4 rounded-md text-base flex items-center space-x-2"
           >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
               <path d="M12 4v16m8-8H4" />
             </svg>
             <span>Add Inventory</span>
@@ -219,14 +217,14 @@ export default function Inventorycontainer() {
             <tbody>
               {currentItems.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-3 text-center">No inventory found</td>
+                  <td colSpan={role === "Admin" ? "6" : "5"} className="px-6 py-3 text-center">No finished items found</td>
                 </tr>
               ) : currentItems.map((item, idx) => (
                 <tr key={`${item.id ?? 'noid'}-${(item.item_name ?? 'item').toString().replace(/\s+/g,'_')}-${idx}`} className="border-t border-gray-200 hover:bg-gray-50">
                   <td className="px-6 py-3 whitespace-nowrap">{item.item_name}</td>
                   <td className="px-6 py-3 whitespace-nowrap">{item.quantity}</td>
-                  <td className="px-6 py-3 whitespace-nowrap">{item.minimum_required ?? item.minimumRequired ?? '-'}</td>
-                  <td className="px-6 py-3 whitespace-nowrap">Piece</td>
+                  <td className="px-6 py-3 whitespace-nowrap">{item.minimum_required}</td>
+                  <td className="px-6 py-3 whitespace-nowrap">{item.unit || 'Piece'}</td>
                   <td className="px-6 py-3 whitespace-nowrap">
                     <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                       item.status === 'Low Stock' ? 'bg-red-100 text-red-800' :
@@ -234,29 +232,18 @@ export default function Inventorycontainer() {
                       'bg-green-100 text-green-800'
                     }`}>{item.status}</span>
                   </td>
-                  
-                    {(role === "Admin") && (
-                      <td className="px-6 py-3 text-center">
+                  {(role === "Admin") && (
+                  <td className="px-6 py-3 text-center">
                     <div className="inline-flex items-center gap-2">
-                      {/* If this row comes from production (no inventory id), show Save button */}
-                      {(!item.id || item.source === 'production') ? (
-                        <button onClick={() => handleSaveFromProduction(item)} className="px-3 py-1 bg-green-100 text-green-800 rounded-md text-sm">
-                          Save
-                        </button>
-                      ) : (
-                        <>
-                          <button onClick={() => openModal(item)} className="p-1 rounded-full hover:bg-blue-50">
-                            <img src="asset/edit.png" alt="Edit" className="w-4 h-4"/>
-                          </button>
-                          <button onClick={() => handleDelete(item.id)} className="p-1 rounded-full hover:bg-red-50">
-                            <img src="asset/delete.png" alt="Delete" className="w-4 h-4"/>
-                          </button>
-                        </>
-                      )}
+                      <button onClick={() => openModal(item)} className="p-1 rounded-full hover:bg-blue-50">
+                        <img src="asset/edit.png" alt="Edit" className="w-4 h-4"/>
+                      </button>
+                      <button onClick={() => handleDelete(item.id)} className="p-1 rounded-full hover:bg-red-50">
+                        <img src="asset/delete.png" alt="Delete" className="w-4 h-4"/>
+                      </button>
                     </div>
-                    
                   </td>
-                    )}
+                  )}
                 </tr>
               ))}
             </tbody>

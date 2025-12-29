@@ -11,19 +11,20 @@ class Production extends Model
 
     protected $table = 'productions';
 
-        protected $fillable = [
+    protected $fillable = [
         'batch_id',
         'task',
         'quantity',
+        'minimum_required',
         'material_id',
         'material_name',
         'material_quantity',
         'unit',
         'assigned_user_id',
-        'assigned_to',   
+        'assigned_to',
         'assign_date',
-        'status',
         'due_date',
+        'status',
     ];
 
     // Relations
@@ -32,8 +33,8 @@ class Production extends Model
         return $this->belongsTo(User::class, 'assigned_user_id');
     }
 
-   public function materialItem()
-{
-    return $this->belongsTo(RawMaterial::class, 'material_id', 'id');
-}
+    public function materialItem()
+    {
+        return $this->belongsTo(RawMaterial::class, 'material_id', 'id');
+    }
 }

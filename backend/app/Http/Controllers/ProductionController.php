@@ -62,6 +62,32 @@ class ProductionController extends Controller
         }
     }
 
+    // Update a production record
+    public function update(Request $request, $id)
+    {
+        $production = Production::find($id);
+        if (!$production) {
+            return response()->json(['message' => 'Production not found'], 404);
+        }
+
+        try {
+            $updateData = [];
+
+            if ($request->has('task')) $updateData['task'] = $request->task;
+            if ($request->has('quantity')) $updateData['quantity'] = $request->quantity;
+            if ($request->has('minimum_required')) $updateData['minimum_required'] = $request->minimum_required;
+            if ($request->has('unit')) $updateData['unit'] = $request->unit;
+            if ($request->has('status')) $updateData['status'] = $request->status;
+
+            $production->update($updateData);
+
+            return response()->json($production);
+        } catch (\Throwable $e) {
+            Log::error('Production update error: ' . $e->getMessage());
+            return response()->json(['message' => 'Failed to update production', 'error' => $e->getMessage()], 500);
+        }
+    }
+
     // Assign or update a task for a production batch
     public function assignTask(Request $request, $batch)
     {
