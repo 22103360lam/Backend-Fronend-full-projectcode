@@ -17,6 +17,8 @@ class User extends Authenticatable
         'phone',
         'role',
         'password',
+        'department',
+        'otp_verified_at',
     ];
 
     protected $hidden = [
@@ -26,5 +28,6 @@ class User extends Authenticatable
 
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'otp_verified_at' => 'datetime',
     ];
 }

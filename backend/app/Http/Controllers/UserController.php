@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Auth\Events\Registered;
 
 class UserController extends Controller
 {
@@ -49,7 +50,14 @@ class UserController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        return response()->json(['message' => 'User created successfully', 'user' => $user]);
+        // Fire the Registered event to send OTP
+        event(new Registered($user));
+
+        return response()->json([
+            'message' => 'User created successfully. Please check your email for OTP verification.',
+            'user' => $user,
+            'requires_otp' => true
+        ]);
     }
 
     // Update user

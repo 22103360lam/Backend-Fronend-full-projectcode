@@ -56,6 +56,12 @@ Route::post('/inventory', [InventoryController::class, 'store']);
 Route::put('/inventory/{id}', [InventoryController::class, 'update']);
 Route::delete('/inventory/{id}', [InventoryController::class, 'destroy']);
 
+// Stock Deliveries CRUD
+Route::get('/stock-deliveries', [App\Http\Controllers\StockDeliveryController::class, 'index']);
+Route::post('/stock-deliveries', [App\Http\Controllers\StockDeliveryController::class, 'store']);
+Route::put('/stock-deliveries/{id}', [App\Http\Controllers\StockDeliveryController::class, 'update']);
+Route::delete('/stock-deliveries/{id}', [App\Http\Controllers\StockDeliveryController::class, 'destroy']);
+
 
 // optional: production inventory endpoint
 Route::get('/production/inventory', [ProductionController::class, 'inventory']);
@@ -92,4 +98,64 @@ Route::post('/login', function (Request $request) {
 // Token-authenticated user
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return response()->json($request->user());
+});
+// OTP API routes (authenticated)
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/otp/verify', [\App\Http\Controllers\Auth\OtpController::class, 'apiVerify']);
+    Route::post('/otp/resend', [\App\Http\Controllers\Auth\OtpController::class, 'apiResend']);
+});
+
+// Public OTP verification (for newly created users who haven't logged in yet)
+Route::post('/otp/verify-new-user', function (Request $request) {
+    $request->validate([
+        'user_id' => 'required|exists:users,id',
+        'token' => 'required|string',
+    ]);
+
+    $user = App\Models\User::find($request->user_id);
+    $token = $request->token;
+
+    $otp = App\Models\Otp::where('user_id', $user->id)
+        ->where('token', $token)
+        ->where('used', false)
+        ->orderBy('created_at', 'desc')
+        ->first();
+
+    if (!$otp) {
+        return response()->json(['message' => 'Invalid verification code.'], 404);
+    }
+
+    if ($otp->expires_at && \Carbon\Carbon::now()->gt($otp->expires_at)) {
+        return response()->json(['message' => 'This verification code has expired.'], 422);
+    }
+
+    $otp->used = true;
+    $otp->save();
+
+    $user->otp_verified_at = \Carbon\Carbon::now();
+    $user->save();
+
+    return response()->json(['message' => 'OTP verified successfully.', 'user' => $user], 200);
+});
+
+// Public OTP resend (for newly created users)
+Route::post('/otp/resend-new-user', function (Request $request) {
+    $request->validate([
+        'user_id' => 'required|exists:users,id',
+    ]);
+
+    $user = App\Models\User::find($request->user_id);
+    $token = (string) random_int(100000, 999999);
+
+    $otp = App\Models\Otp::create([
+        'user_id' => $user->id,
+        'channel' => 'email',
+        'target' => $user->email,
+        'token' => $token,
+        'expires_at' => \Carbon\Carbon::now()->addMinutes(10),
+    ]);
+
+    $user->notify(new App\Notifications\SendOtpNotification($token));
+
+    return response()->json(['message' => 'A new verification code was sent.'], 200);
 });

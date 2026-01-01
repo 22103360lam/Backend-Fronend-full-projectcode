@@ -94,6 +94,7 @@ class ProductionController extends Controller
         $request->validate([
             'task' => 'required|string',
             'quantity' => 'nullable|string',
+            'minimum_required' => 'nullable|integer|min:0',
             'assigned_user_id' => 'nullable|exists:users,id',
             'assigned_to' => 'nullable|string',
             'status' => 'nullable|string',
@@ -112,14 +113,74 @@ class ProductionController extends Controller
             $assignedTo = $request->assigned_to;
         }
 
+        // Store old status to check if it changed to 'Finished'
+        $oldStatus = $production->status;
+        $newStatus = $request->status ?? $production->status;
+
         $production->update([
             'task' => $request->task,
             'quantity' => $request->quantity ?? $production->quantity,
+            'minimum_required' => $request->minimum_required ?? $production->minimum_required,
             'assigned_user_id' => $request->assigned_user_id ?? $production->assigned_user_id,
             'assigned_to' => $assignedTo,
-            'status' => $request->status ?? $production->status,
+            'status' => $newStatus,
             'due_date' => $request->due_date ?? $production->due_date,
         ]);
+
+        // If status changed to 'Finished', add/update inventory
+        if ($newStatus === 'Finished' && $oldStatus !== 'Finished') {
+            try {
+                $itemName = $production->task;
+                // Extract numeric quantity from string like '500pc' or '500'
+                $rawQty = $production->quantity ?? 0;
+                $qty = 0;
+                if (is_numeric($rawQty)) {
+                    $qty = (int)$rawQty;
+                } else {
+                    $matches = [];
+                    preg_match('/(\d+)/', (string)$rawQty, $matches);
+                    $qty = isset($matches[1]) ? (int)$matches[1] : 0;
+                }
+
+                if ($itemName && $qty > 0) {
+                    // Get minimum_required from production (default to 50 if not set)
+                    $minRequired = $production->minimum_required ?? 50;
+                    
+                    // Always create new inventory entry (separate row for each finished task)
+                    Inventory::create([
+                        'item_name' => $itemName,
+                        'quantity' => $qty,
+                        'minimum_required' => $minRequired,
+                        'unit' => $production->unit ?? 'Piece',
+                        'status' => $qty <= $minRequired && $minRequired > 0 ? 'Low Stock' : 'In Stock'
+                    ]);
+                    Log::info("Created new inventory entry: {$itemName} with quantity: {$qty}, minimum_required: {$minRequired}");
+
+                    // Also add/update in Stock Deliveries table
+                    $existingStock = \App\Models\StockDelivery::whereRaw('LOWER(item_name) = ?', [strtolower(trim($itemName))])->first();
+                    
+                    if ($existingStock) {
+                        // Update existing stock - add quantity
+                        $newStockQty = $existingStock->quantity + $qty;
+                        $existingStock->update(['quantity' => $newStockQty]);
+                        Log::info("Updated stock delivery: {$itemName} - added {$qty}, new total: {$newStockQty}");
+                    } else {
+                        // Create new stock delivery entry
+                        \App\Models\StockDelivery::create([
+                            'item_name' => $itemName,
+                            'quantity' => $qty,
+                            'delivery_status' => 'Pending',
+                            'delivered_quantity' => 0,
+                            'unit' => $production->unit ?? 'Piece'
+                        ]);
+                        Log::info("Created new stock delivery: {$itemName} with quantity: {$qty}");
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::error('Failed to update inventory from production: ' . $e->getMessage());
+                // Don't fail the production update if inventory update fails
+            }
+        }
 
         return response()->json($production);
     }

@@ -19,6 +19,7 @@ export default function Productioncontainer() {
     batch: '',
     task: '',
     quantity: '',
+    minimum_required: '',
     assigned_user_id: '',
     assigned_to: '',
     status: 'On Track',
@@ -56,13 +57,16 @@ export default function Productioncontainer() {
         axios.get('http://127.0.0.1:8000/api/users')
       ]);
 
-      setUsers(userRes.data || []);
+      // Filter to only show Staff role users
+      const staffUsers = (userRes.data || []).filter(u => u.role === 'Staff');
+      setUsers(staffUsers);
 
       const prods = (prodRes.data || []).map(p => ({
         id: p.id,                      
         batch: p.batch_id,             
         task: p.task || '',
         quantity: p.quantity?.toString() || '',
+        minimum_required: p.minimum_required?.toString() || '',
         material: p.material_id ? p.material_id.toString() : '',
         materialName: p.material_name ?? p.materialItem?.material_name ?? '',
         materialQuantity: p.material_quantity?.toString() || '',
@@ -97,7 +101,7 @@ const filteredTasks = tasks.filter(t => {
     return (t.assignDate || '').toString().slice(0, 10) === filterDate;
   }
   return t.status === filterStatus; // On Track / In Progress / Delayed
-});
+}).sort((a, b) => b.id - a.id); // Sort by ID descending (newest first)
 
 
 // ===== Pagination logic =====
@@ -162,6 +166,7 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
         {
           task: taskForm.task,
           quantity: taskForm.quantity,
+          minimum_required: taskForm.minimum_required || null,
           assigned_user_id: taskForm.assigned_user_id || null,
           assigned_to: taskForm.assigned_to || '',
           status: taskForm.status,
@@ -176,6 +181,7 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
                 ...t,
                 task: res.data.task,
                 quantity: res.data.quantity?.toString() || '',
+                minimum_required: res.data.minimum_required?.toString() || '',
                 assigned_user_id: res.data.assigned_user_id?.toString() || '',
                 assigned_to: res.data.assigned_to || '',
                 status: res.data.status,
@@ -185,7 +191,7 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
         )
       );
 
-      setTaskForm({ batch: '', task: '', quantity: '', assigned_user_id: '', assigned_to: '',status: 'On Track', dueDate: '' });
+      setTaskForm({ batch: '', task: '', quantity: '', minimum_required: '', assigned_user_id: '', assigned_to: '',status: 'On Track', dueDate: '' });
       setEditTask(null);
     } catch (err) {
       console.error(err);
@@ -254,6 +260,7 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
       batch: task.batch,
       task: task.task,
       quantity: task.quantity,
+      minimum_required: task.minimum_required || '',
       assigned_user_id: task.assigned_user_id,
       assigned_to: task.assigned_to || '',
       status: task.status,
@@ -291,37 +298,15 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
         return;
       }
 
-      // First, check if item already exists in inventory
-      const inventoryRes = await axios.get('http://127.0.0.1:8000/api/inventory');
-      const inventoryItems = Array.isArray(inventoryRes.data) ? inventoryRes.data : [];
-      
-      // Find existing item with same name (case-insensitive)
-      const existingItem = inventoryItems.find(
-        item => (item.item_name || '').toLowerCase().trim() === itemName.toLowerCase().trim()
-      );
-
-      if (existingItem) {
-        // Item exists - update quantity by adding new quantity
-        const newQuantity = Number(existingItem.quantity || 0) + quantity;
-        await axios.put(`http://127.0.0.1:8000/api/inventory/${existingItem.id}`, {
-          item_name: existingItem.item_name,
-          quantity: newQuantity,
-          minimum_required: existingItem.minimum_required || 0,
-          unit: 'Piece',
-          status: newQuantity > (existingItem.minimum_required || 0) ? 'In Stock' : 'Low Stock'
-        });
-        console.log(`Updated inventory: ${itemName} - added ${quantity}, new total: ${newQuantity}`);
-      } else {
-        // Item doesn't exist - create new inventory item
-        await axios.post('http://127.0.0.1:8000/api/inventory', {
-          item_name: itemName,
-          quantity: quantity,
-          minimum_required: 0,
-          unit: 'Piece',
-          status: 'In Stock'
-        });
-        console.log(`Created new inventory item: ${itemName} with quantity: ${quantity}`);
-      }
+      // Always create new inventory entry (separate row for each finished task)
+      await axios.post('http://127.0.0.1:8000/api/inventory', {
+        item_name: itemName,
+        quantity: quantity,
+        minimum_required: task.minimum_required || 0,
+        unit: 'Piece',
+        status: 'In Stock'
+      });
+      console.log(`Created new inventory entry: ${itemName} with quantity: ${quantity}`);
 
       // Notify inventory page about update
       window.dispatchEvent(new CustomEvent('inventory-updated'));
@@ -359,9 +344,10 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
       );
       setOpenStatusMenu(null);
 
-      // If status changed to "Finished", add to inventory
+      // Inventory is automatically handled by backend when status is "Finished"
+      // Notify inventory page about update
       if (newStatus === 'Finished') {
-        await addToInventory(task);
+        window.dispatchEvent(new CustomEvent('inventory-updated'));
       }
     } catch (err) {
       console.error(err);
@@ -466,6 +452,19 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
               value={taskForm.quantity}
               onChange={e => setTaskForm({ ...taskForm, quantity: e.target.value })}
               required
+            />
+          </div>
+
+          {/* Minimum Required */}
+          <div className="flex flex-col gap-1 flex-1">
+            <label htmlFor="minRequired">Min Required</label>
+            <input
+              type="number"
+              id="minRequired"
+              placeholder="Min Qty"
+              className="flex-1 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]"
+              value={taskForm.minimum_required}
+              onChange={e => setTaskForm({ ...taskForm, minimum_required: e.target.value })}
             />
           </div>
         
@@ -641,6 +640,7 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Batch ID</th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Task</th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Quantity</th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Min Required</th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Material</th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Material Quantity</th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Unit</th>
@@ -648,7 +648,7 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Assign Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Due Date</th>
-                 {(role === "Admin"  ) && (
+                 {(role === "Admin" || role==="Manager"  ) && (
                 <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider">Actions</th>
                  )}
               </tr>
@@ -656,13 +656,18 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
             <tbody>
               {currentTasks.length === 0 ? (
                 <tr>
-                  <td colSpan="11" className="px-6 py-3 text-center">No tasks assigned</td>
+                  <td colSpan="12" className="px-6 py-3 text-center">No tasks assigned</td>
                 </tr>
               ) : currentTasks.map(task => (
                 <tr key={task.id} className="border-t border-gray-200 hover:bg-gray-50">
                   <td className="px-6 py-3 whitespace-nowrap">{task.batch}</td>
                   <td className="px-6 py-3 whitespace-nowrap">{task.task}</td>
                   <td className="px-6 py-3 whitespace-nowrap">{task.quantity}piece</td>
+                  <td className="px-6 py-3 whitespace-nowrap">
+                    <span className="px-2 py-1 bg-purple-50 text-purple-700 rounded text-xs font-medium">
+                      {task.minimum_required || '-'}
+                    </span>
+                  piece</td>
                   <td className="px-6 py-3 whitespace-nowrap">{task.materialName || '-'}</td>
                   <td className="px-6 py-3 whitespace-nowrap">{task.materialQuantity}</td>
                   <td className="px-6 py-3 whitespace-nowrap">{task.unit || '-'}</td>
@@ -721,18 +726,32 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
                     </div>
                   </td>
                   <td className="px-6 py-3 whitespace-nowrap">{task.dueDate}</td>
-                   {(role === "Admin" ) && (
-                   <td className="px-6 py-3 text-center">
-                    <div className="inline-flex items-center gap-2">
-                      <button onClick={() => handleEditTask(task)} className="p-1 rounded-full hover:bg-blue-50">
-                        <img src="asset/edit.png" alt="Edit" className="w-4 h-4"/>
-                      </button>
-                      <button onClick={() => handleDeleteTask(task.id)} className="p-1 rounded-full hover:bg-red-50">
-                        <img src="asset/delete.png" alt="Delete" className="w-4 h-4"/>
-                      </button>
-                    </div>
-                  </td>
-                   )}
+               {(role === "Admin" || role === "Manager") && (
+  <td className="px-6 py-3 text-center">
+    <div className="inline-flex items-center gap-2">
+
+      {/* Edit button: Admin + Manager */}
+      <button
+        onClick={() => handleEditTask(task)}
+        className="p-1 rounded-full hover:bg-blue-50"
+      >
+        <img src="asset/edit.png" alt="Edit" className="w-4 h-4" />
+      </button>
+
+      {/* Delete button: only Admin */}
+      {role === "Admin" && (
+        <button
+          onClick={() => handleDeleteTask(task.id)}
+          className="p-1 rounded-full hover:bg-red-50"
+        >
+          <img src="asset/delete.png" alt="Delete" className="w-4 h-4" />
+        </button>
+      )}
+
+    </div>
+  </td>
+)}
+
                 </tr>
               ))}
             </tbody>

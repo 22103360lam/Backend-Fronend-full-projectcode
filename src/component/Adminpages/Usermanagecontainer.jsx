@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import OtpVerification from './OtpVerification';
 
 export default function UserManageContainer({ closeModal, initialData, onSave }) {
   const [formData, setFormData] = useState({
@@ -10,6 +11,10 @@ export default function UserManageContainer({ closeModal, initialData, onSave })
     department: '',
     password: ''
   });
+  
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [createdUser, setCreatedUser] = useState(null);
+  const [userToken, setUserToken] = useState(null);
 
   useEffect(() => {
     if (initialData) {
@@ -41,6 +46,13 @@ export default function UserManageContainer({ closeModal, initialData, onSave })
         ? await axios.put(`http://127.0.0.1:8000/api/users/${initialData.id}`, payload)
         : await axios.post("http://127.0.0.1:8000/api/users", payload);
 
+      // Check if OTP verification is required (new user creation)
+      if (response.data.requires_otp) {
+        setCreatedUser(response.data.user);
+        setShowOtpModal(true);
+        return; // Don't close modal yet
+      }
+
       alert(response.data.message);
 
       const userForTable = {
@@ -60,6 +72,30 @@ export default function UserManageContainer({ closeModal, initialData, onSave })
       console.error(error.response?.data || error.message);
       alert(error.response?.data?.message || "Error saving user");
     }
+  };
+
+  const handleOtpVerified = (user) => {
+    const userForTable = {
+      id: user.id,
+      fullName: user.name,
+      emailOrPhone: user.email || user.phone,
+      role: user.role,
+      department: user.department || formData.department,
+      status: "Active",
+      lastActive: "Just now",
+      password: '********'
+    };
+
+    onSave(userForTable);
+    setShowOtpModal(false);
+    closeModal();
+  };
+
+  const handleOtpCancel = () => {
+    setShowOtpModal(false);
+    localStorage.removeItem('temp_user_token');
+    alert('User created but email not verified. They can verify later.');
+    closeModal();
   };
 
   return (
@@ -175,6 +211,15 @@ export default function UserManageContainer({ closeModal, initialData, onSave })
           </div>
         </form>
       </div>
+      
+      {/* OTP Verification Modal */}
+      {showOtpModal && (
+        <OtpVerification
+          user={createdUser}
+          onVerified={handleOtpVerified}
+          onCancel={handleOtpCancel}
+        />
+      )}
     </div>
   );
 }

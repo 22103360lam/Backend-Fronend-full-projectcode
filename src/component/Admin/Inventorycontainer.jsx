@@ -112,8 +112,9 @@ export default function Inventorycontainer() {
 
   // filtered list used for table/pagination (table only)
   const filteredInventory = useMemo(() => {
-    if (!filters.name) return inventory;
-    return inventory.filter(i => (i.item_name ?? '').toString() === filters.name);
+    const filtered = !filters.name ? inventory : inventory.filter(i => (i.item_name ?? '').toString() === filters.name);
+    // Sort by ID descending (newest first)
+    return filtered.sort((a, b) => b.id - a.id);
   }, [inventory, filters]);
 
   // reset page when filter changes
@@ -210,7 +211,7 @@ export default function Inventorycontainer() {
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Unit</th>
                 <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Status</th>
                 {(role === "Admin") && (
-                <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-center text-sm font-medium uppercase tracking-wider">Actions</th>
                 )}
               </tr>
             </thead>
@@ -263,7 +264,303 @@ export default function Inventorycontainer() {
 
         {/* Modal */}
         {showModal && <Addinventory closeModal={closeModal} item={selectedItem} onSave={handleSave} />}
+
+        {/* Stock Deliveries Section */}
+        <StockDeliveriesSection role={role} />
       </section>
     </div>
   );
 }
+
+// Stock Deliveries Component
+function StockDeliveriesSection({ role }) {
+  const [stockDeliveries, setStockDeliveries] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [showDeliveryModal, setShowDeliveryModal] = useState(false);
+  const [selectedDelivery, setSelectedDelivery] = useState(null);
+  const itemsPerPage = 5;
+
+  useEffect(() => {
+    fetchStockDeliveries();
+  }, []);
+
+  const fetchStockDeliveries = async () => {
+    try {
+      const res = await axios.get('/stock-deliveries');
+      setStockDeliveries(Array.isArray(res.data) ? res.data : []);
+    } catch (error) {
+      console.error('Failed to fetch stock deliveries:', error);
+    }
+  };
+
+  const handleSaveDelivery = async (data) => {
+    try {
+      if (data.id) {
+        await axios.put(`/stock-deliveries/${data.id}`, data);
+      } else {
+        await axios.post('/stock-deliveries', data);
+      }
+      await fetchStockDeliveries();
+      setShowDeliveryModal(false);
+    } catch (error) {
+      console.error('Failed to save delivery:', error);
+      alert(error.response?.data?.message || 'Failed to save delivery');
+    }
+  };
+
+  const handleUpdateDeliveryStatus = async (id, newStatus) => {
+    try {
+      const item = stockDeliveries.find(s => s.id === id);
+      if (!item) return;
+      
+      await axios.put(`/stock-deliveries/${id}`, {
+        ...item,
+        delivery_status: newStatus
+      });
+      await fetchStockDeliveries();
+    } catch (error) {
+      console.error('Failed to update delivery status:', error);
+      alert('Failed to update delivery status');
+    }
+  };
+
+  const handleDeleteDelivery = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this?')) return;
+    try {
+      await axios.delete(`/stock-deliveries/${id}`);
+      await fetchStockDeliveries();
+    } catch (error) {
+      console.error('Failed to delete:', error);
+    }
+  };
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  // Sort by ID descending (newest first)
+  const sortedDeliveries = [...stockDeliveries].sort((a, b) => b.id - a.id);
+  const currentItems = sortedDeliveries.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(stockDeliveries.length / itemsPerPage);
+
+  const goToPage = (pageNumber) => {
+    if (pageNumber < 1 || pageNumber > totalPages) return;
+    setCurrentPage(pageNumber);
+  };
+
+  return (
+    <div className="mt-10">
+      <div className="mb-4 flex items-start justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Stocks & Deliveries</h2>
+          <p className="text-gray-600 mt-1">Track stock quantities and delivery status</p>
+        </div>
+        {role === "Admin" && (
+          <button
+            onClick={() => { setSelectedDelivery(null); setShowDeliveryModal(true); }}
+            className="bg-[#6C5CE7] hover:bg-[#5949D5] text-white font-semibold py-2 px-4 rounded-md text-base flex items-center space-x-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+              <path d="M12 4v16m8-8H4" />
+            </svg>
+            <span>Add Stock</span>
+          </button>
+        )}
+      </div>
+
+      <div className="bg-white rounded-lg shadow overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="text-white" style={{ background: 'linear-gradient(135deg, #8E7DFF, #6C5CE7)' }}>
+            <tr>
+              <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Item Name</th>
+              <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Quantity</th>
+              <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Delivery Status</th>
+              <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Delivered Quantity</th>
+              <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Unit</th>
+              {role === "Admin" && (
+                <th className="px-6 py-3 text-center text-sm font-medium uppercase tracking-wider">Actions</th>
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {currentItems.length === 0 ? (
+              <tr>
+                <td colSpan={role === "Admin" ? "6" : "5"} className="px-6 py-3 text-center">No stock deliveries found</td>
+              </tr>
+            ) : currentItems.map((item) => (
+              <tr key={item.id} className="border-t border-gray-200 hover:bg-gray-50">
+                <td className="px-6 py-3 whitespace-nowrap">{item.item_name}</td>
+                <td className="px-6 py-3 whitespace-nowrap">{item.quantity}</td>
+                <td className="px-6 py-3 whitespace-nowrap">
+                  {role === "Admin" && item.delivery_status !== 'Delivered' ? (
+                    <select
+                      value={item.delivery_status}
+                      onChange={(e) => handleUpdateDeliveryStatus(item.id, e.target.value)}
+                      className={`px-3 py-1 text-xs font-semibold rounded-full border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#6C5CE7] ${
+                        item.delivery_status === 'In Transit' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}
+                    >
+                      <option value="Pending">Pending</option>
+                      <option value="In Transit">In Transit</option>
+                      <option value="Delivered">Delivered</option>
+                    </select>
+                  ) : (
+                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      item.delivery_status === 'Delivered' ? 'bg-green-100 text-green-800' :
+                      item.delivery_status === 'In Transit' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>{item.delivery_status}</span>
+                  )}
+                </td>
+                <td className="px-6 py-3 whitespace-nowrap">{item.delivered_quantity}</td>
+                <td className="px-6 py-3 whitespace-nowrap">{item.unit}</td>
+                {role === "Admin" && (
+                  <td className="px-6 py-3 text-center">
+                    <div className="inline-flex items-center gap-2">
+                      <button onClick={() => { setSelectedDelivery(item); setShowDeliveryModal(true); }} className="p-1 rounded-full hover:bg-blue-50">
+                        <img src="asset/edit.png" alt="Edit" className="w-4 h-4"/>
+                      </button>
+                      <button onClick={() => handleDeleteDelivery(item.id)} className="p-1 rounded-full hover:bg-red-50">
+                        <img src="asset/delete.png" alt="Delete" className="w-4 h-4"/>
+                      </button>
+                    </div>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      <div className="mt-6 flex justify-end space-x-2">
+        <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1} className="px-3 py-2 border border-gray-300 rounded-md text-base hover:bg-gray-50 disabled:opacity-50">Previous</button>
+        {[...Array(totalPages)].map((_, idx) => (
+          <button key={idx + 1} onClick={() => goToPage(idx + 1)} className={`px-3 py-2 rounded-md text-base ${currentPage === idx + 1 ? 'bg-[#6C5CE7] text-white' : 'border border-gray-300 hover:bg-gray-50'}`}>{idx+1}</button>
+        ))}
+        <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages} className="px-3 py-2 border border-gray-300 rounded-md text-base hover:bg-gray-50 disabled:opacity-50">Next</button>
+      </div>
+
+      {showDeliveryModal && <DeliveryModal closeModal={() => setShowDeliveryModal(false)} item={selectedDelivery} onSave={handleSaveDelivery} />}
+    </div>
+  );
+}
+
+// Delivery Modal Component
+function DeliveryModal({ closeModal, item, onSave }) {
+  const [formData, setFormData] = useState({
+    item_name: '',
+    quantity: '',
+    delivery_status: 'Pending',
+    delivered_quantity: '',
+    unit: 'Piece'
+  });
+  const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (item) {
+      setFormData({
+        item_name: item.item_name || '',
+        quantity: item.quantity || '',
+        delivery_status: item.delivery_status || 'Pending',
+        delivered_quantity: item.delivered_quantity || '',
+        unit: item.unit || 'Piece'
+      });
+    }
+  }, [item]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const newErrors = {};
+    
+    if (!formData.item_name.trim()) newErrors.item_name = 'Item name is required';
+    if (!formData.quantity || Number(formData.quantity) < 0) newErrors.quantity = 'Valid quantity is required';
+    if (Number(formData.delivered_quantity) > Number(formData.quantity)) {
+      newErrors.delivered_quantity = 'Delivered quantity cannot exceed total quantity';
+    }
+    
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length === 0) {
+      onSave({
+        id: item?.id,
+        item_name: formData.item_name,
+        quantity: Number(formData.quantity),
+        delivery_status: formData.delivery_status,
+        delivered_quantity: Number(formData.delivered_quantity) || 0,
+        unit: formData.unit
+      });
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={(e) => e.target === e.currentTarget && closeModal()}>
+      <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900">{item ? 'Edit Stock Delivery' : 'Add Stock Delivery'}</h2>
+          <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+
+        <div className="p-6">
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            <div>
+              <label className="block text-gray-700 font-medium mb-2">Item Name <span className="text-red-500">*</span></label>
+              <input type="text" value={formData.item_name} onChange={(e) => setFormData({...formData, item_name: e.target.value})}
+                className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.item_name ? 'border-red-500' : 'border-gray-300'}`}/>
+              {errors.item_name && <p className="text-red-500 text-sm mt-1">{errors.item_name}</p>}
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-medium mb-2">Quantity <span className="text-red-500">*</span></label>
+              <input type="number" value={formData.quantity} onChange={(e) => setFormData({...formData, quantity: e.target.value})} min="0"
+                className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.quantity ? 'border-red-500' : 'border-gray-300'}`}/>
+              {errors.quantity && <p className="text-red-500 text-sm mt-1">{errors.quantity}</p>}
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-medium mb-2">Delivery Status</label>
+              <select value={formData.delivery_status} onChange={(e) => setFormData({...formData, delivery_status: e.target.value})}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="Pending">Pending</option>
+                <option value="In Transit">In Transit</option>
+                <option value="Delivered">Delivered</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-medium mb-2">Delivered Quantity</label>
+              <input 
+                type="number" 
+                value={formData.delivered_quantity} 
+                onChange={(e) => setFormData({...formData, delivered_quantity: e.target.value})} 
+                min="0"
+                disabled={item && item.delivered_quantity > 0}
+                className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.delivered_quantity ? 'border-red-500' : 'border-gray-300'} ${item && item.delivered_quantity > 0 ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+              />
+              {errors.delivered_quantity && <p className="text-red-500 text-sm mt-1">{errors.delivered_quantity}</p>}
+              {item && item.delivered_quantity > 0 && <p className="text-gray-500 text-sm mt-1">Delivered quantity can only be set once</p>}
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-medium mb-2">Unit</label>
+              <input 
+                type="text" 
+                value="Piece" 
+                disabled 
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 cursor-not-allowed"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 mt-6">
+              <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">Cancel</button>
+              <button type="submit" className="px-4 py-2 bg-[#6C5CE7] text-white rounded-md hover:bg-[#5949D5]">{item ? 'Save Changes' : 'Add Item'}</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
