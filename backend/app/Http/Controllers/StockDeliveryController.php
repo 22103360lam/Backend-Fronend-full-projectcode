@@ -25,6 +25,7 @@ class StockDeliveryController extends Controller
     {
         $request->validate([
             'item_name' => 'required|string|max:255',
+            'supplier' => 'nullable|string|max:255',
             'quantity' => 'required|integer|min:0',
             'delivery_status' => 'nullable|string|max:50',
             'delivered_quantity' => 'nullable|integer|min:0',
@@ -46,6 +47,7 @@ class StockDeliveryController extends Controller
                 // Create new entry
                 $stockDelivery = StockDelivery::create([
                     'item_name' => $request->item_name,
+                    'supplier' => $request->supplier,
                     'quantity' => $request->quantity,
                     'delivery_status' => $request->delivery_status ?? 'Pending',
                     'delivered_quantity' => $request->delivered_quantity ?? 0,
@@ -64,6 +66,7 @@ class StockDeliveryController extends Controller
     {
         $request->validate([
             'item_name' => 'nullable|string|max:255',
+            'supplier' => 'nullable|string|max:255',
             'quantity' => 'nullable|integer|min:0',
             'delivery_status' => 'nullable|string|max:50',
             'delivered_quantity' => 'nullable|integer|min:0',
@@ -82,8 +85,28 @@ class StockDeliveryController extends Controller
                 return response()->json(['message' => 'Delivered quantity cannot exceed total quantity'], 400);
             }
 
-            $stockDelivery->fill($request->only(['item_name', 'quantity', 'delivery_status', 'delivered_quantity', 'unit']));
+            // Calculate the difference in delivered quantity
+            $oldDeliveredQty = $stockDelivery->delivered_quantity;
+            $newDeliveredQty = $request->has('delivered_quantity') ? $request->delivered_quantity : $oldDeliveredQty;
+            $deliveryDifference = $newDeliveredQty - $oldDeliveredQty;
+
+            // Update stock delivery
+            $stockDelivery->fill($request->only(['item_name', 'supplier', 'quantity', 'delivery_status', 'delivered_quantity', 'unit']));
             $stockDelivery->save();
+
+            // Update inventory if delivered quantity changed
+            if ($deliveryDifference != 0) {
+                $inventory = \App\Models\Inventory::whereRaw('LOWER(item_name) = ?', [strtolower(trim($stockDelivery->item_name))])->first();
+                if ($inventory) {
+                    $newInventoryQty = $inventory->quantity - $deliveryDifference;
+                    if ($newInventoryQty < 0) $newInventoryQty = 0;
+                    
+                    $inventory->quantity = $newInventoryQty;
+                    $inventory->status = $newInventoryQty <= $inventory->minimum_required && $inventory->minimum_required > 0 ? 'Low Stock' : 'In Stock';
+                    $inventory->save();
+                }
+            }
+
             return response()->json($stockDelivery);
         } catch (\Throwable $e) {
             Log::error('StockDelivery update error: ' . $e->getMessage());

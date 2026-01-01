@@ -13,6 +13,7 @@ class StockDelivery extends Model
 
     protected $fillable = [
         'item_name',
+        'supplier',
         'quantity',
         'delivery_status',
         'delivered_quantity',

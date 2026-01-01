@@ -287,6 +287,7 @@ function StockDeliveriesSection({ role }) {
   const fetchStockDeliveries = async () => {
     try {
       const res = await axios.get('/stock-deliveries');
+      console.log('Fetched stock deliveries:', res.data);
       setStockDeliveries(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       console.error('Failed to fetch stock deliveries:', error);
@@ -295,10 +296,13 @@ function StockDeliveriesSection({ role }) {
 
   const handleSaveDelivery = async (data) => {
     try {
+      console.log('Saving delivery data:', data);
       if (data.id) {
-        await axios.put(`/stock-deliveries/${data.id}`, data);
+        const response = await axios.put(`/stock-deliveries/${data.id}`, data);
+        console.log('Update response:', response.data);
       } else {
-        await axios.post('/stock-deliveries', data);
+        const response = await axios.post('/stock-deliveries', data);
+        console.log('Create response:', response.data);
       }
       await fetchStockDeliveries();
       setShowDeliveryModal(false);
@@ -371,6 +375,7 @@ function StockDeliveriesSection({ role }) {
           <thead className="text-white" style={{ background: 'linear-gradient(135deg, #8E7DFF, #6C5CE7)' }}>
             <tr>
               <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Item Name</th>
+              <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Buyer Name</th>
               <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Quantity</th>
               <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Delivery Status</th>
               <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Delivered Quantity</th>
@@ -383,26 +388,33 @@ function StockDeliveriesSection({ role }) {
           <tbody>
             {currentItems.length === 0 ? (
               <tr>
-                <td colSpan={role === "Admin" ? "6" : "5"} className="px-6 py-3 text-center">No stock deliveries found</td>
+                <td colSpan={role === "Admin" ? "7" : "6"} className="px-6 py-3 text-center">No stock deliveries found</td>
               </tr>
             ) : currentItems.map((item) => (
               <tr key={item.id} className="border-t border-gray-200 hover:bg-gray-50">
                 <td className="px-6 py-3 whitespace-nowrap">{item.item_name}</td>
-                <td className="px-6 py-3 whitespace-nowrap">{item.quantity}</td>
+                <td className="px-6 py-3 whitespace-nowrap">{item.supplier || '-'}</td>
+                <td className="px-6 py-3 whitespace-nowrap">{item.quantity - (item.delivered_quantity || 0)}</td>
                 <td className="px-6 py-3 whitespace-nowrap">
-                  {role === "Admin" && item.delivery_status !== 'Delivered' ? (
-                    <select
-                      value={item.delivery_status}
-                      onChange={(e) => handleUpdateDeliveryStatus(item.id, e.target.value)}
-                      className={`px-3 py-1 text-xs font-semibold rounded-full border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#6C5CE7] ${
-                        item.delivery_status === 'In Transit' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      <option value="Pending">Pending</option>
-                      <option value="In Transit">In Transit</option>
-                      <option value="Delivered">Delivered</option>
-                    </select>
+                  {role === "Admin" ? (
+                    item.delivery_status === 'Delivered' ? (
+                      <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                        Delivered
+                      </span>
+                    ) : (
+                      <select
+                        value={item.delivery_status}
+                        onChange={(e) => handleUpdateDeliveryStatus(item.id, e.target.value)}
+                        className={`px-3 py-1 text-xs font-semibold rounded-full border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#6C5CE7] ${
+                          item.delivery_status === 'In Transit' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}
+                      >
+                        <option value="Pending">Pending</option>
+                        <option value="In Transit">In Transit</option>
+                        <option value="Delivered">Delivered</option>
+                      </select>
+                    )
                   ) : (
                     <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                       item.delivery_status === 'Delivered' ? 'bg-green-100 text-green-800' :
@@ -449,6 +461,7 @@ function StockDeliveriesSection({ role }) {
 function DeliveryModal({ closeModal, item, onSave }) {
   const [formData, setFormData] = useState({
     item_name: '',
+    supplier: '',
     quantity: '',
     delivery_status: 'Pending',
     delivered_quantity: '',
@@ -460,6 +473,7 @@ function DeliveryModal({ closeModal, item, onSave }) {
     if (item) {
       setFormData({
         item_name: item.item_name || '',
+        supplier: item.supplier || '',
         quantity: item.quantity || '',
         delivery_status: item.delivery_status || 'Pending',
         delivered_quantity: item.delivered_quantity || '',
@@ -483,6 +497,7 @@ function DeliveryModal({ closeModal, item, onSave }) {
       onSave({
         id: item?.id,
         item_name: formData.item_name,
+        supplier: formData.supplier,
         quantity: Number(formData.quantity),
         delivery_status: formData.delivery_status,
         delivered_quantity: Number(formData.delivered_quantity) || 0,
@@ -508,21 +523,33 @@ function DeliveryModal({ closeModal, item, onSave }) {
             <div>
               <label className="block text-gray-700 font-medium mb-2">Item Name <span className="text-red-500">*</span></label>
               <input type="text" value={formData.item_name} onChange={(e) => setFormData({...formData, item_name: e.target.value})}
-                className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.item_name ? 'border-red-500' : 'border-gray-300'}`}/>
+                disabled={!!item}
+                className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.item_name ? 'border-red-500' : 'border-gray-300'} ${item ? 'bg-gray-100 cursor-not-allowed' : ''}`}/>
               {errors.item_name && <p className="text-red-500 text-sm mt-1">{errors.item_name}</p>}
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-medium mb-2">Buyer Name</label>
+              <input type="text" value={formData.supplier} onChange={(e) => setFormData({...formData, supplier: e.target.value})}
+                placeholder="Enter buyer name"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
             </div>
 
             <div>
               <label className="block text-gray-700 font-medium mb-2">Quantity <span className="text-red-500">*</span></label>
               <input type="number" value={formData.quantity} onChange={(e) => setFormData({...formData, quantity: e.target.value})} min="0"
-                className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.quantity ? 'border-red-500' : 'border-gray-300'}`}/>
+                disabled={!!item}
+                className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.quantity ? 'border-red-500' : 'border-gray-300'} ${item ? 'bg-gray-100 cursor-not-allowed' : ''}`}/>
               {errors.quantity && <p className="text-red-500 text-sm mt-1">{errors.quantity}</p>}
             </div>
 
             <div>
               <label className="block text-gray-700 font-medium mb-2">Delivery Status</label>
-              <select value={formData.delivery_status} onChange={(e) => setFormData({...formData, delivery_status: e.target.value})}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <select 
+                value={formData.delivery_status} 
+                onChange={(e) => setFormData({...formData, delivery_status: e.target.value})}
+                disabled={item && item.delivery_status === 'Delivered'}
+                className={`w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${item && item.delivery_status === 'Delivered' ? 'bg-gray-100 cursor-not-allowed' : ''}`}>
                 <option value="Pending">Pending</option>
                 <option value="In Transit">In Transit</option>
                 <option value="Delivered">Delivered</option>
@@ -536,11 +563,9 @@ function DeliveryModal({ closeModal, item, onSave }) {
                 value={formData.delivered_quantity} 
                 onChange={(e) => setFormData({...formData, delivered_quantity: e.target.value})} 
                 min="0"
-                disabled={item && item.delivered_quantity > 0}
-                className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.delivered_quantity ? 'border-red-500' : 'border-gray-300'} ${item && item.delivered_quantity > 0 ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.delivered_quantity ? 'border-red-500' : 'border-gray-300'}`}
               />
               {errors.delivered_quantity && <p className="text-red-500 text-sm mt-1">{errors.delivered_quantity}</p>}
-              {item && item.delivered_quantity > 0 && <p className="text-gray-500 text-sm mt-1">Delivered quantity can only be set once</p>}
             </div>
 
             <div>
