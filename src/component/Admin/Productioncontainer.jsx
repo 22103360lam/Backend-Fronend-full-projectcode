@@ -191,6 +191,29 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
         )
       );
 
+      // Create alert for task assignment
+      if (taskForm.assigned_user_id && taskForm.task) {
+        const assignedUser = users.find(u => u.id.toString() === taskForm.assigned_user_id.toString());
+        const userName = assignedUser?.name || 'Unknown User';
+        
+        // Get existing task alerts from localStorage
+        const existingAlerts = localStorage.getItem('taskAlerts');
+        const taskAlerts = existingAlerts ? JSON.parse(existingAlerts) : [];
+        
+        // Add new task assignment alert
+        const newAlert = {
+          id: `task-${res.data.id}-${Date.now()}`,
+          taskName: taskForm.task,
+          userName: userName,
+          status: 'task assigned',
+          timestamp: new Date().toISOString()
+        };
+        
+        taskAlerts.push(newAlert);
+        localStorage.setItem('taskAlerts', JSON.stringify(taskAlerts));
+        window.dispatchEvent(new Event('task-alerts-updated'));
+      }
+
       setTaskForm({ batch: '', task: '', quantity: '', minimum_required: '', assigned_user_id: '', assigned_to: '',status: 'On Track', dueDate: '' });
       setEditTask(null);
     } catch (err) {
@@ -343,6 +366,25 @@ const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
         )
       );
       setOpenStatusMenu(null);
+
+      // Create alert when task is finished
+      if (newStatus === 'Finished' && task.task) {
+        // Get existing task alerts from localStorage
+        const existingAlerts = localStorage.getItem('taskAlerts');
+        const taskAlerts = existingAlerts ? JSON.parse(existingAlerts) : [];
+        
+        // Add new task finished alert
+        const newAlert = {
+          id: `task-finished-${taskId}-${Date.now()}`,
+          taskName: task.task,
+          status: 'task finished',
+          timestamp: new Date().toISOString()
+        };
+        
+        taskAlerts.push(newAlert);
+        localStorage.setItem('taskAlerts', JSON.stringify(taskAlerts));
+        window.dispatchEvent(new Event('task-alerts-updated'));
+      }
 
       // Inventory is automatically handled by backend when status is "Finished"
       // Notify inventory page about update

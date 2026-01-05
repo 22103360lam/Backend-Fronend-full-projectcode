@@ -125,6 +125,9 @@ export default function AddMaterial({ closeModal, initialData = null, onSave }) 
       }
 
       onSave(response.data.material ?? response.data)
+      
+      // Dispatch event to notify other components (e.g., dashboard)
+      window.dispatchEvent(new Event('material-updated'))
     } catch (err) {
       console.error(err)
       alert(err.response?.data?.message || 'Error saving material')

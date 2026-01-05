@@ -12,58 +12,69 @@ export default function Alertcontainer() {
 
   // Manual alerts (added from modal) + auto low-stock alerts
   const [alerts, setAlerts] = useState([])
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 4
 
   // Load low-stock materials AND in-stock inventory, build auto alerts
   useEffect(() => {
     let mounted = true
     const loadAlerts = async () => {
       try {
-        const [matRes, invRes] = await Promise.all([
-          axios.get('/materials'),
-          axios.get('/inventory'),
-        ])
+        // Get material alerts from localStorage (created by dashboard)
+        const storedAlerts = localStorage.getItem('materialAlerts')
+        const materialAlerts = storedAlerts ? JSON.parse(storedAlerts) : []
 
-        const materials = Array.isArray(matRes.data) ? matRes.data : matRes.data?.data ?? []
-        const inventory  = Array.isArray(invRes.data) ? invRes.data : invRes.data?.data ?? []
-
-        const lowStockAlerts = materials
-          .filter(m => String(m.status ?? '').toLowerCase() === 'low stock')
-          .map(m => ({
-            id: `low-${m.id}`,
+        const materialAutoAlerts = materialAlerts.map(alert => {
+          const isCritical = alert.status === 'critical stock'
+          return {
+            id: alert.id,
             auto: true,
-            type: 'critical',
-            title: 'Critical: Low Stock Alert',
-            message: `Low raw material: ${m.material_name ?? m.name ?? 'Unknown'}. Stock ${Number(m.stock_quantity ?? m.stock ?? 0)} ${m.unit ?? '-'} is below required.`,
-            priority: 'High',
+            type: isCritical ? 'critical' : 'warning',
+            title: isCritical ? 'Critical Stock Alert' : 'Low Stock Alert',
+            message: `${alert.materialName} is ${alert.status}`,
+            priority: isCritical ? 'Critical' : 'High',
             icon: 'warning',
-            borderColor: 'border-red-500',
-            bgColor: 'bg-red-100',
-            textColor: 'text-red-600',
-            titleColor: 'text-red-700',
-            badgeColor: 'bg-red-100 text-red-800'
-          }))
+            borderColor: isCritical ? 'border-red-700' : 'border-yellow-500',
+            bgColor: isCritical ? 'bg-red-200' : 'bg-yellow-100',
+            textColor: isCritical ? 'text-red-700' : 'text-yellow-600',
+            titleColor: isCritical ? 'text-red-800' : 'text-yellow-700',
+            badgeColor: isCritical ? 'bg-red-200 text-red-900' : 'bg-yellow-100 text-yellow-800',
+            timestamp: alert.timestamp
+          }
+        })
 
-        const taskDoneAlerts = inventory
-          .filter(i => String(i.status ?? '').toLowerCase() === 'in stock')
-          .map(i => ({
-            id: `task-${i.id}`,
+        // Get task alerts from localStorage (created by production)
+        const storedTaskAlerts = localStorage.getItem('taskAlerts')
+        const taskAlerts = storedTaskAlerts ? JSON.parse(storedTaskAlerts) : []
+
+        const taskAutoAlerts = taskAlerts.map(alert => {
+          const isFinished = alert.status === 'task finished'
+          return {
+            id: alert.id,
             auto: true,
-            type: 'success',
-            title: 'Task Done: Inventory Ready',
-            message: `Task done: ${i.item_name ?? 'Unknown'} is ready with ${Number(i.quantity ?? 0)} ${i.unit ?? 'Piece'}.`,
+            type: 'info',
+            title: isFinished ? 'Task Finished' : 'Task Assignment',
+            message: isFinished 
+              ? `${alert.taskName} (task) is finished`
+              : `${alert.taskName} (task) is assigned to ${alert.userName}`,
             priority: 'Medium',
-            icon: 'check',
-            borderColor: 'border-green-500',
-            bgColor: 'bg-green-100',
-            textColor: 'text-green-600',
-            titleColor: 'text-green-700',
-            badgeColor: 'bg-green-100 text-green-800'
-          }))
+            icon: isFinished ? 'check' : 'info',
+            borderColor: isFinished ? 'border-green-500' : 'border-blue-500',
+            bgColor: isFinished ? 'bg-green-100' : 'bg-blue-100',
+            textColor: isFinished ? 'text-green-600' : 'text-blue-600',
+            titleColor: isFinished ? 'text-green-700' : 'text-blue-700',
+            badgeColor: isFinished ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800',
+            hidePriority: true,
+            timestamp: alert.timestamp
+          }
+        })
 
         if (mounted) {
           setAlerts(prev => {
             const manual = prev.filter(a => !a.auto)
-            return [...lowStockAlerts, ...taskDoneAlerts, ...manual]
+            return [...materialAutoAlerts, ...taskAutoAlerts, ...manual]
           })
         }
       } catch (e) {
@@ -72,8 +83,19 @@ export default function Alertcontainer() {
     }
 
     loadAlerts()
+    
+    // Listen for material alerts updates from dashboard
+    const handleAlertsUpdate = () => loadAlerts()
+    window.addEventListener('material-alerts-updated', handleAlertsUpdate)
+    window.addEventListener('task-alerts-updated', handleAlertsUpdate)
+    
     const t = setInterval(loadAlerts, 30000) // optional refresh
-    return () => { mounted = false; clearInterval(t) }
+    return () => { 
+      mounted = false
+      clearInterval(t)
+      window.removeEventListener('material-alerts-updated', handleAlertsUpdate)
+      window.removeEventListener('task-alerts-updated', handleAlertsUpdate)
+    }
   }, [])
 
   const openModal = () => setShowModal(true)
@@ -119,6 +141,23 @@ export default function Alertcontainer() {
     }
   }
 
+  // Pagination logic
+  const sortedAlerts = [...alerts].sort((a, b) => {
+    const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0
+    const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0
+    return timeB - timeA // newest first
+  })
+  
+  const totalPages = Math.max(1, Math.ceil(sortedAlerts.length / itemsPerPage))
+  const indexOfLastAlert = currentPage * itemsPerPage
+  const indexOfFirstAlert = indexOfLastAlert - itemsPerPage
+  const currentAlerts = sortedAlerts.slice(indexOfFirstAlert, indexOfLastAlert)
+
+  const goToPage = (page) => {
+    if (page < 1 || page > totalPages) return
+    setCurrentPage(page)
+  }
+
   return (
     <div>
       <section className="p-4 md:p-6 bg-[#eff1f9] min-h-screen">
@@ -143,8 +182,8 @@ export default function Alertcontainer() {
           {showModal && <Addalert closeModal={closeModal} addAlert={handleAddAlert} />}
 
           <div className="space-y-4">
-            {alerts.length > 0 ? (
-              alerts.map((alert) => (
+            {currentAlerts.length > 0 ? (
+              currentAlerts.map((alert) => (
                 <div key={alert.id} className={`bg-white rounded-lg border-l-4 ${alert.borderColor} shadow-md hover:shadow-lg transition-shadow p-6`}>
                   <div className="flex items-start space-x-4">
                     <div className={`w-10 h-10 ${alert.bgColor} rounded-full flex items-center justify-center`}>
@@ -169,11 +208,27 @@ export default function Alertcontainer() {
                       </div>
                       
                       <p className="text-base text-gray-700 mt-1">{alert.message}</p>
-                      <div className="flex items-center justify-between mt-4">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${alert.badgeColor}`}>
-                          {alert.priority}
-                        </span>
-                      </div>
+                      
+                      {/* Display timestamp */}
+                      {alert.timestamp && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          {new Date(alert.timestamp).toLocaleString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </p>
+                      )}
+                      
+                      {!alert.hidePriority && (
+                        <div className="flex items-center justify-between mt-4">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${alert.badgeColor}`}>
+                            {alert.priority}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -188,6 +243,39 @@ export default function Alertcontainer() {
               </div>
             )}
           </div>
+
+          {/* Pagination */}
+          {sortedAlerts.length > itemsPerPage && (
+            <div className="mt-6 flex justify-center space-x-2">
+              <button 
+                onClick={() => goToPage(currentPage - 1)} 
+                disabled={currentPage === 1} 
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              {[...Array(totalPages)].map((_, idx) => (
+                <button 
+                  key={idx + 1} 
+                  onClick={() => goToPage(idx + 1)} 
+                  className={`px-3 py-2 rounded-md text-sm ${
+                    currentPage === idx + 1 
+                      ? 'bg-[#6C5CE7] text-white' 
+                      : 'border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {idx + 1}
+                </button>
+              ))}
+              <button 
+                onClick={() => goToPage(currentPage + 1)} 
+                disabled={currentPage === totalPages} 
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       </section>
     </div>

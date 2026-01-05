@@ -57,6 +57,9 @@ export default function MaterialMainContainer() {
     try {
       await axios.delete(`http://127.0.0.1:8000/api/raw-materials/${id}`);
       setMaterials(prev => prev.filter(m => m.id !== id));
+      
+      // Dispatch event to notify dashboard
+      window.dispatchEvent(new Event('material-updated'));
     } catch (err) {
       console.error(err);
       alert("Error deleting material");

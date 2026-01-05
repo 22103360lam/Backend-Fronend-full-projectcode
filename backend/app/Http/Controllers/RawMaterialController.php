@@ -16,16 +16,27 @@ class RawMaterialController extends Controller
         );
     }
 
-    // Auto calculate stock status
+    // Auto calculate stock status based on percentage
     private function getStatus($quantity, $min_required)
     {
         if ($quantity == 0) {
             return 'Out of Stock';
-        } elseif ($quantity < $min_required) {
-            return 'Low Stock';
-        } else {
-            return 'In Stock';
         }
+        
+        if ($min_required > 0) {
+            $percentage = ($quantity / $min_required) * 100;
+            
+            if ($percentage >= 100) {
+                return 'In Stock';
+            } elseif ($percentage >= 50) {
+                return 'Medium Stock';
+            } else {
+                return 'Low Stock';
+            }
+        }
+        
+        // If min_required is 0, consider any quantity as In Stock
+        return 'In Stock';
     }
 
     // Store new raw material
@@ -104,5 +115,27 @@ class RawMaterialController extends Controller
 
         $material->delete();
         return response()->json(['message' => 'Raw material deleted']);
+    }
+
+    // Recalculate all material statuses
+    public function recalculateStatuses()
+    {
+        $materials = RawMaterial::all();
+        $updated = 0;
+
+        foreach ($materials as $material) {
+            $newStatus = $this->getStatus($material->quantity, $material->min_required);
+            if ($material->status !== $newStatus) {
+                $material->status = $newStatus;
+                $material->save();
+                $updated++;
+            }
+        }
+
+        return response()->json([
+            'message' => 'Statuses recalculated',
+            'total' => $materials->count(),
+            'updated' => $updated
+        ]);
     }
 }

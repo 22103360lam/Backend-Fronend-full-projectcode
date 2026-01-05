@@ -22,6 +22,7 @@ Route::get('/raw-materials', [RawMaterialController::class, 'index']);
 Route::post('/raw-materials', [RawMaterialController::class, 'store']);
 Route::put('/raw-materials/{id}', [RawMaterialController::class, 'update']);
 Route::delete('/raw-materials/{id}', [RawMaterialController::class, 'destroy']);
+Route::post('/raw-materials/recalculate-statuses', [RawMaterialController::class, 'recalculateStatuses']);
 
 
 // Supplier CRUD API

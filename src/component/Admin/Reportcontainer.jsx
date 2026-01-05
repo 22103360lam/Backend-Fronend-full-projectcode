@@ -182,24 +182,52 @@ export default function Reportcontainer() {
     // Prepare CSV data based on tab
     let csvContent = '';
     if(activeTab === 'delivery'){
+      // Add tab header
+      const tabHeader = 'Stock & Delivery Summary';
+      const filterInfo = (from || to) 
+        ? `Date Filter: From ${from || 'start'} to ${to || 'today'}` 
+        : 'Date Filter: All Records';
+      
       // Custom headers for delivery data
-      const headers = ['Item Name', 'Buyer Name', 'Total Quantity', 'Delivered', 'Remaining', 'Delivery Status', 'Unit', 'Date'];
-      const rows = filtered.map(r => [
+      const headers = ['Date', 'Item Name', 'Delivered Quantity', 'Supplier/Buyer', 'Remaining', 'Status', 'Unit'];
+      const rows = filtered.sort((a, b) => new Date(b.date) - new Date(a.date)).map(r => [
+        r.date !== '-' ? new Date(r.date).toLocaleDateString() : '',
         r.itemName || '',
-        r.buyerName || '',
-        r.totalQuantity || 0,
         r.deliveredQty || 0,
+        r.buyerName || '',
         r.quantity || 0,
         r.deliveryStatus || '',
-        r.unit || '',
-        r.date !== '-' ? new Date(r.date).toLocaleDateString() : ''
+        r.unit || ''
       ].map(cell => String(cell).replace(/,/g, '')).join(','));
-      csvContent = [headers.join(','), ...rows].join('\n');
+      
+      csvContent = [tabHeader, filterInfo, '', headers.join(','), ...rows].join('\n');
     } else {
-      // Default CSV for material
-      const headers = Object.keys(filtered[0]).filter(k=>k!=='id' && k!=='usedFor')
-      const csvRows = filtered.map(r=> headers.map(h=> (r[h] ?? '').toString().replace(/,/g, '')).join(','))
-      csvContent = [headers.join(','), ...csvRows].join('\n')
+      // Add tab header for material
+      const tabHeader = 'Material Usage Report';
+      const filterInfo = (from || to) 
+        ? `Date Filter: From ${from || 'start'} to ${to || 'today'}` 
+        : 'Date Filter: All Records';
+      
+      // Material usage CSV with task details
+      const headers = ['Material Name', 'Task Name', 'Material Used', 'Items Produced', 'Date', 'Unit'];
+      const csvRows = [];
+      
+      filtered.forEach(material => {
+        if (material.usedFor && material.usedFor.length > 0) {
+          material.usedFor.forEach(usage => {
+            csvRows.push([
+              material.material || '',
+              usage.task || '',
+              usage.materialQty || 0,
+              usage.productQty || 0,
+              usage.date ? new Date(usage.date).toLocaleDateString() : '-',
+              material.unit || ''
+            ].map(cell => String(cell).replace(/,/g, '')).join(','));
+          });
+        }
+      });
+      
+      csvContent = [tabHeader, filterInfo, '', headers.join(','), ...csvRows].join('\n');
     }
     
     const blob = new Blob([csvContent], {type:'text/csv'})
@@ -248,10 +276,10 @@ export default function Reportcontainer() {
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-4 mb-4 border-b border-gray-200 bg-white rounded-t-lg">
+        <div className="flex space-x-4 mb-4">
           {['material','delivery'].map(tab=>(
             <button key={tab} onClick={()=>handleTabChange(tab)}
-              className={`px-4 py-2 font-medium ${activeTab===tab?'bg-[#6C5CE7] border-b-2 rounded hover:bg-[#5949D5] text-white':'text-black text-sm'}`}>
+              className={`px-4 py-2 font-medium rounded ${activeTab===tab?'bg-[#6C5CE7] text-white hover:bg-[#5949D5]':'bg-white text-black text-sm border border-gray-200'}`}>
               {tab==='material'?'Material Usage':'Stock & Delivery Summary'}
             </button>
           ))}
@@ -259,77 +287,56 @@ export default function Reportcontainer() {
 
         {/* Content */}
         {activeTab === 'material' ? (
-          <div className="bg-white rounded-lg shadow overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="text-white" style={{background:'linear-gradient(135deg, #8E7DFF, #6C5CE7)'}}>
-                <tr>
-                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">No.</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Material Name</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Total Used</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Unit</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium uppercase tracking-wider">Used For (Tasks)</th>
-                  {(role === "Admin") && (
-                  <th className="px-6 py-3 text-center text-sm font-medium">Actions</th>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {currentData.map((row,index)=>(
-                  <tr key={row.id} className="hover:bg-gray-50 text-black">
-                    <td className="px-6 py-3 whitespace-nowrap">
-                      <div className="w-7 h-7 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center font-semibold text-sm">
-                        {indexOfFirstItem + index + 1}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Material Usage</h3>
+            <div className="space-y-4">
+              {currentData.map((row, index) => (
+                <div key={row.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                  <div className="flex justify-between items-start mb-3">
+                    <h4 className="text-lg font-bold text-purple-700">{row.material}</h4>
+                    <span className="bg-purple-600 text-white px-3 py-1 rounded font-bold text-sm">
+                      Total: {row.totalUsed} {row.unit}
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {row.usedFor && row.usedFor.map((usage, idx) => (
+                      <div key={idx} className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-4 border-l-4 border-purple-500">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                          <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Task Name</p>
+                            <p className="text-sm font-bold text-gray-800">{usage.task}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Material Used</p>
+                            <span className="inline-block bg-blue-600 text-white px-3 py-1 rounded text-sm font-bold">
+                              {usage.materialQty} {row.unit}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Items Produced</p>
+                            <span className="inline-block bg-green-600 text-white px-3 py-1 rounded text-sm font-bold">
+                              {usage.productQty} items
+                            </span>
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Date</p>
+                            <p className="text-sm font-medium text-gray-700">
+                              {usage.date ? new Date(usage.date).toLocaleDateString() : '-'}
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-base font-bold text-gray-900">{row.material}</td>
-                    <td className="px-6 py-3 whitespace-nowrap text-base">
-                      <span className="bg-purple-600 text-white px-4 py-1.5 rounded font-bold">{row.totalUsed}</span>
-                    </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-base text-gray-700 font-semibold">{row.unit}</td>
-                    <td className="px-4 py-3">
-                      <table className="w-full text-sm border border-gray-300 rounded">
-                        <thead className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white">
-                          <tr>
-                            <th className="px-3 py-2 text-left text-xs font-semibold">Task Name</th>
-                            <th className="px-3 py-2 text-center text-xs font-semibold">Material Used</th>
-                            <th className="px-3 py-2 text-center text-xs font-semibold">Items Produced</th>
-                            <th className="px-3 py-2 text-right text-xs font-semibold">Date</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {row.usedFor && row.usedFor.map((usage, idx) => (
-                            <tr key={idx} className="border-b border-gray-200 hover:bg-blue-50">
-                              <td className="px-3 py-2 font-medium text-gray-800">{usage.task}</td>
-                              <td className="px-3 py-2 text-center">
-                                <span className="bg-blue-500 text-white px-2 py-1 rounded text-xs font-bold">{usage.materialQty} {row.unit}</span>
-                              </td>
-                              <td className="px-3 py-2 text-center">
-                                <span className="bg-green-500 text-white px-2 py-1 rounded text-xs font-bold">{usage.productQty} items</span>
-                              </td>
-                              <td className="px-3 py-2 text-right text-gray-600 text-xs">{usage.date ? new Date(usage.date).toLocaleDateString() : '-'}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </td>
-                    {(role === "Admin") && (
-                    <td className="px-6 py-3 text-center text-base font-medium">
-                      <button onClick={() => handleDeleteClick(row.id, activeTab)} className="text-red-600 hover:text-red-800 p-1" title="Delete">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                        </svg>
-                      </button>
-                    </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-              <span className="text-2xl">📦</span> Stock & Delivery Summary
+            <h3 className="text-xl font-bold text-gray-900 mb-3">
+              Stock & Delivery Summary
             </h3>
             
             {(() => {
@@ -374,98 +381,101 @@ export default function Reportcontainer() {
               
               return (
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                    <div className="relative overflow-hidden rounded-lg p-6 flex flex-col justify-between bg-white shadow-md border-l-4 border-[#28A745] lg:border-l-8 text-gray-800">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex flex-col items-start">
-                          <p className="font-medium text-[#28A745] uppercase mb-1">Total Produced</p>
-                          <p className="text-xl font-bold">{totalProduced} Piece</p>
-                        </div>
-                        <img src="/asset/box-minimalistic-svgrepo-com.svg" alt="produced" className="h-10 w-10 ml-4 opacity-70" />
-                      </div>
-                    </div>
-                    <div className="relative overflow-hidden rounded-lg p-6 flex flex-col justify-between bg-white shadow-md border-l-4 border-[#5A4BCF] lg:border-l-8 text-gray-800">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex flex-col items-start">
-                          <p className="font-medium text-[#5A4BCF] uppercase mb-1">Total Delivered</p>
-                          <p className="text-xl font-bold">{totalDelivered} Piece</p>
-                        </div>
-                        <img src="/asset/instock (2).png" alt="delivered" className="h-10 w-10 ml-4 opacity-70" />
-                      </div>
-                    </div>
-                    <div className="relative overflow-hidden rounded-lg p-6 flex flex-col justify-between bg-white shadow-md border-l-4 border-[#FF6B35] lg:border-l-8 text-gray-800">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex flex-col items-start">
-                          <p className="font-medium text-[#FF6B35] uppercase mb-1">Remaining Stock</p>
-                          <p className="text-xl font-bold">{totalProduced - totalDelivered} Piece</p>
-                        </div>
-                        <img src="/asset/box-minimalistic-svgrepo-com.svg" alt="remaining" className="h-10 w-10 ml-4 opacity-70" />
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Weekly Graph */}
-                  <div className="bg-white rounded-lg shadow p-6 mb-6">
-                    <h4 className="text-lg font-bold text-gray-900 mb-4">Weekly Production & Delivery Overview</h4>
-                    {(() => {
-                      // Calculate weekly data
-                      const weeklyData = {};
-                      filtered.forEach(item => {
-                        if (item.date === '-') return;
-                        const date = new Date(item.date);
-                        const weekStart = new Date(date);
-                        weekStart.setDate(date.getDate() - date.getDay()); // Start of week (Sunday)
-                        const weekKey = weekStart.toISOString().slice(0, 10);
+                  {/* Charts Side by Side */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    {/* Item-wise Production Chart */}
+                    <div className="bg-white rounded-lg shadow p-6">
+                      <h4 className="text-lg font-bold text-gray-900 mb-4">Item-wise Production</h4>
+                      {(() => {
+                        // Group by item name
+                        const itemData = {};
+                        filtered.forEach(item => {
+                          const itemName = item.itemName;
+                          if (!itemData[itemName]) {
+                            itemData[itemName] = 0;
+                          }
+                          itemData[itemName] += item.totalQuantity || 0;
+                        });
                         
-                        if (!weeklyData[weekKey]) {
-                          weeklyData[weekKey] = {
-                            weekLabel: `Week ${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
-                            produced: 0,
-                            delivered: 0
-                          };
-                        }
-                        weeklyData[weekKey].produced += item.totalQuantity || 0;
-                        weeklyData[weekKey].delivered += item.deliveredQty || 0;
-                      });
-                      
-                      const weeks = Object.values(weeklyData).slice(-4); // Last 4 weeks
-                      const maxValue = Math.max(...weeks.flatMap(w => [w.produced, w.delivered]), 1);
-                      
-                      return (
-                        <div className="space-y-4">
-                          {weeks.map((week, index) => (
-                            <div key={index}>
-                              <div className="flex justify-between items-center mb-1">
-                                <span className="text-sm font-semibold text-gray-700">{week.weekLabel}</span>
-                                <span className="text-xs text-gray-500">Produced: {week.produced} | Delivered: {week.delivered}</span>
-                              </div>
-                              <div className="flex gap-2">
-                                <div className="flex-1">
-                                  <div className="h-8 bg-gray-200 rounded overflow-hidden">
+                        const items = Object.entries(itemData).sort((a, b) => b[1] - a[1]); // Sort by quantity desc
+                        const maxValue = Math.max(...items.map(i => i[1]), 1);
+                        
+                        return (
+                          <div className="flex items-end justify-around h-72 border-b-2 border-l-2 border-gray-300 p-4 overflow-x-auto">
+                            {items.map(([itemName, quantity], index) => (
+                              <div key={index} className="flex flex-col items-center min-w-[80px] mx-2">
+                                <div className="flex items-end justify-center h-56 w-full">
+                                  <div className="relative flex flex-col items-center w-full">
                                     <div 
-                                      className="h-full bg-gradient-to-r from-green-500 to-green-600 flex items-center justify-end pr-2 text-white text-xs font-bold transition-all duration-300"
-                                      style={{ width: `${(week.produced / maxValue) * 100}%` }}
+                                      className="w-14 bg-gradient-to-t from-green-600 to-green-400 rounded-t hover:opacity-80 transition-all shadow-md"
+                                      style={{ height: `${(quantity / maxValue) * 200}px`, minHeight: '20px' }}
                                     >
-                                      {week.produced > 0 && week.produced}
+                                      <div className="absolute -top-7 left-1/2 transform -translate-x-1/2 bg-green-700 text-white text-xs px-2 py-1 rounded font-bold whitespace-nowrap shadow">
+                                        {quantity}
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
-                                <div className="flex-1">
-                                  <div className="h-8 bg-gray-200 rounded overflow-hidden">
-                                    <div 
-                                      className="h-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-end pr-2 text-white text-xs font-bold transition-all duration-300"
-                                      style={{ width: `${(week.delivered / maxValue) * 100}%` }}
-                                    >
-                                      {week.delivered > 0 && week.delivered}
-                                    </div>
-                                  </div>
-                                </div>
+                                <p className="text-xs font-semibold text-gray-700 mt-2 text-center max-w-[80px] break-words">{itemName}</p>
                               </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
+                        );
+                      })()}
+                      <div className="flex justify-center mt-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 bg-gradient-to-t from-green-600 to-green-400 rounded"></div>
+                          <span className="text-sm font-medium text-gray-700">Production Quantity</span>
                         </div>
-                      );
-                    })()}
+                      </div>
+                    </div>
+
+                    {/* Item-wise Delivery Chart */}
+                    <div className="bg-white rounded-lg shadow p-6">
+                      <h4 className="text-lg font-bold text-gray-900 mb-4">Item-wise Deliveries</h4>
+                      {(() => {
+                        // Group by item name
+                        const itemData = {};
+                        filtered.forEach(item => {
+                          const itemName = item.itemName;
+                          if (!itemData[itemName]) {
+                            itemData[itemName] = 0;
+                          }
+                          itemData[itemName] += item.deliveredQty || 0;
+                        });
+                        
+                        const items = Object.entries(itemData).sort((a, b) => b[1] - a[1]); // Sort by quantity desc
+                        const maxValue = Math.max(...items.map(i => i[1]), 1);
+                        
+                        return (
+                          <div className="flex items-end justify-around h-72 border-b-2 border-l-2 border-gray-300 p-4 overflow-x-auto">
+                            {items.map(([itemName, quantity], index) => (
+                              <div key={index} className="flex flex-col items-center min-w-[80px] mx-2">
+                                <div className="flex items-end justify-center h-56 w-full">
+                                  <div className="relative flex flex-col items-center w-full">
+                                    <div 
+                                      className="w-14 bg-gradient-to-t from-blue-600 to-blue-400 rounded-t hover:opacity-80 transition-all shadow-md"
+                                      style={{ height: `${(quantity / maxValue) * 200}px`, minHeight: '20px' }}
+                                    >
+                                      <div className="absolute -top-7 left-1/2 transform -translate-x-1/2 bg-blue-700 text-white text-xs px-2 py-1 rounded font-bold whitespace-nowrap shadow">
+                                        {quantity}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                                <p className="text-xs font-semibold text-gray-700 mt-2 text-center max-w-[80px] break-words">{itemName}</p>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                      <div className="flex justify-center mt-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 bg-gradient-to-t from-blue-600 to-blue-400 rounded"></div>
+                          <span className="text-sm font-medium text-gray-700">Delivered Quantity</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                   
                   <p className="text-gray-600 mb-4 text-sm">
@@ -481,70 +491,52 @@ export default function Reportcontainer() {
                     )}
                   </p>
 
-                  {Object.entries(monthlyData).sort().reverse().map(([monthKey, monthInfo]) => (
-                    <div key={monthKey} className="mb-8">
-                      <div className="text-white px-4 py-2 rounded-t-lg flex justify-between items-center" style={{background:'linear-gradient(135deg, #8E7DFF, #6C5CE7)'}}>
-                        <h4 className="text-lg font-bold">{monthInfo.monthName}</h4>
-                        <div className="flex gap-4 text-sm">
-                          <span>Produced: <strong>{monthInfo.totalProduced}</strong></span>
-                          <span>Delivered: <strong>{monthInfo.totalDelivered}</strong></span>
-                          <span>Remaining: <strong>{monthInfo.totalProduced - monthInfo.totalDelivered}</strong></span>
-                        </div>
-                      </div>
-                      
-                      <div className="overflow-x-auto">
-                        <table className="w-full border-collapse">
-                          <thead className="text-white" style={{background:'linear-gradient(135deg, #8E7DFF, #6C5CE7)'}}>
-                            <tr>
-                              <th className="px-4 py-3 text-left text-sm font-medium uppercase tracking-wider">Item Name</th>
-                              <th className="px-4 py-3 text-center text-sm font-medium uppercase tracking-wider">Buyer Name</th>
-                              <th className="px-4 py-3 text-center text-sm font-medium uppercase tracking-wider">Total Quantity</th>
-                              <th className="px-4 py-3 text-center text-sm font-medium uppercase tracking-wider">Delivered</th>
-                              <th className="px-4 py-3 text-center text-sm font-medium uppercase tracking-wider">Remaining</th>
-                              <th className="px-4 py-3 text-center text-sm font-medium uppercase tracking-wider">Delivery Status</th>
-                              <th className="px-4 py-3 text-center text-sm font-medium uppercase tracking-wider">Unit</th>
-                              <th className="px-4 py-3 text-center text-sm font-medium uppercase tracking-wider">Date</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {monthInfo.items.map((item, index) => {
-                              return (
-                                <tr key={item.id} className={`border-b ${index % 2 === 0 ? 'bg-purple-50' : 'bg-white'} hover:bg-purple-100`}>
-                                  <td className="px-4 py-3 font-semibold text-gray-900">{item.itemName}</td>
-                                  <td className="px-4 py-3 text-center text-gray-700">{item.buyerName}</td>
-                                  <td className="px-4 py-3 text-center">
-                                    <span className="bg-green-600 text-white px-3 py-1 rounded font-bold text-sm">{item.totalQuantity}</span>
-                                  </td>
-                                  <td className="px-4 py-3 text-center">
-                                    <span className="bg-blue-600 text-white px-3 py-1 rounded font-bold text-sm">{item.deliveredQty}</span>
-                                  </td>
-                                  <td className="px-4 py-3 text-center">
-                                    <span className="bg-indigo-600 text-white px-3 py-1 rounded font-bold text-sm">{item.quantity}</span>
-                                  </td>
-                                  <td className="px-4 py-3 text-center">
-                                    {item.deliveryStatus === 'Delivered' ? (
-                                      <span className="bg-green-600 text-white px-3 py-1 rounded-full font-bold text-xs">Delivered</span>
-                                    ) : item.deliveryStatus === 'In Transit' ? (
-                                      <span className="bg-yellow-600 text-white px-3 py-1 rounded-full font-bold text-xs">In Transit</span>
-                                    ) : (
-                                      <span className="bg-gray-600 text-white px-3 py-1 rounded-full font-bold text-xs">Pending</span>
-                                    )}
-                                  </td>
-                                  <td className="px-4 py-3 text-center text-gray-700 text-sm font-semibold">{item.unit}</td>
-                                  <td className="px-4 py-3 text-center text-gray-700 text-sm">
-                                    {item.date !== '-' ? new Date(item.date).toLocaleDateString() : '-'}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  ))}
+                  {/* Date-wise Delivery Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse bg-white rounded-lg shadow">
+                      <thead className="text-white" style={{background:'linear-gradient(135deg, #8E7DFF, #6C5CE7)'}}>
+                        <tr>
+                          <th className="px-4 py-3 text-left text-sm font-medium uppercase tracking-wider">Date</th>
+                          <th className="px-4 py-3 text-left text-sm font-medium uppercase tracking-wider">Item Name</th>
+                          <th className="px-4 py-3 text-center text-sm font-medium uppercase tracking-wider">Delivered Quantity</th>
+                          <th className="px-4 py-3 text-center text-sm font-medium uppercase tracking-wider">Supplier/Buyer</th>
+                          <th className="px-4 py-3 text-center text-sm font-medium uppercase tracking-wider">Remaining</th>
+                          <th className="px-4 py-3 text-center text-sm font-medium uppercase tracking-wider">Status</th>
+                          <th className="px-4 py-3 text-center text-sm font-medium uppercase tracking-wider">Unit</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filtered.sort((a, b) => new Date(b.date) - new Date(a.date)).map((item, index) => (
+                          <tr key={item.id} className={`border-b ${index % 2 === 0 ? 'bg-purple-50' : 'bg-white'} hover:bg-purple-100`}>
+                            <td className="px-4 py-3 text-gray-700 font-medium">
+                              {item.date !== '-' ? new Date(item.date).toLocaleDateString() : '-'}
+                            </td>
+                            <td className="px-4 py-3 font-semibold text-gray-900">{item.itemName}</td>
+                            <td className="px-4 py-3 text-center">
+                              <span className="bg-blue-600 text-white px-3 py-1 rounded font-bold text-sm">{item.deliveredQty}</span>
+                            </td>
+                            <td className="px-4 py-3 text-center text-gray-700 font-medium">{item.buyerName}</td>
+                            <td className="px-4 py-3 text-center">
+                              <span className="bg-indigo-600 text-white px-3 py-1 rounded font-bold text-sm">{item.quantity}</span>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {item.deliveryStatus === 'Delivered' ? (
+                                <span className="bg-green-600 text-white px-3 py-1 rounded-full font-bold text-xs">Delivered</span>
+                              ) : item.deliveryStatus === 'In Transit' ? (
+                                <span className="bg-yellow-600 text-white px-3 py-1 rounded-full font-bold text-xs">In Transit</span>
+                              ) : (
+                                <span className="bg-gray-600 text-white px-3 py-1 rounded-full font-bold text-xs">Pending</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-center text-gray-700 text-sm font-semibold">{item.unit}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                   
-                  {Object.keys(monthlyData).length === 0 && (
-                    <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+                  {filtered.length === 0 && (
+                    <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500 mt-4">
                       No data available for selected date range
                     </div>
                   )}
