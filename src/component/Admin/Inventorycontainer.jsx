@@ -20,6 +20,8 @@ export default function Inventorycontainer() {
   const [activeTab, setActiveTab] = useState('inventory');
   const itemsPerPage = 5;
 
+
+  
   // Fetch inventory on mount
   useEffect(() => {
     fetchInventory();
@@ -178,41 +180,44 @@ export default function Inventorycontainer() {
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-4 mb-6">
-          <button
-            onClick={() => { setActiveTab('inventory'); setCurrentPage(1); }}
-            className={`px-4 py-2 font-medium rounded ${activeTab === 'inventory' ? 'bg-[#6C5CE7] text-white hover:bg-[#5949D5]' : 'bg-white text-black text-sm border border-gray-200'}`}
-          >
-            Inventory
-          </button>
-          <button
-            onClick={() => { setActiveTab('deliveries'); setCurrentPage(1); }}
-            className={`px-4 py-2 font-medium rounded ${activeTab === 'deliveries' ? 'bg-[#6C5CE7] text-white hover:bg-[#5949D5]' : 'bg-white text-black text-sm border border-gray-200'}`}
-          >
-            Stock & Deliveries
-          </button>
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex space-x-4">
+            <button
+              onClick={() => { setActiveTab('inventory'); setCurrentPage(1); }}
+              className={`px-4 py-2 font-medium rounded ${activeTab === 'inventory' ? 'bg-[#6C5CE7] text-white hover:bg-[#5949D5]' : 'bg-white text-black text-sm border border-gray-200'}`}
+            >
+              Inventory
+            </button>
+            {/* Create Batch   and role based rendaring */}
+            {(role === "Admin" ) && (
+              <button
+                onClick={() => { setActiveTab('deliveries'); setCurrentPage(1); }}
+                className={`px-4 py-2 font-medium rounded ${activeTab === 'deliveries' ? 'bg-[#6C5CE7] text-white hover:bg-[#5949D5]' : 'bg-white text-black text-sm border border-gray-200'}`}
+              >
+                Stock & Deliveries
+              </button>
+            )}
+          </div>
+          {/* Add Inventory Button */}
+          {(role === "Admin" && activeTab === 'inventory') && (
+            <button
+              onClick={() => openModal(null)}
+              className="bg-[#6C5CE7] hover:bg-[#5949D5] text-white font-semibold py-2 px-4 rounded-md text-base flex items-center space-x-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                <path d="M12 4v16m8-8H4" />
+              </svg>
+              <span>Add Inventory</span>
+            </button>
+          )}
         </div>
 
         {/* Inventory Tab Content */}
         {activeTab === 'inventory' && (
           <>
-            {/* Header with Add Button */}
-            <div className="mb-4 flex items-start justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Inventory</h2>
-                <p className="text-gray-600 mt-1">View current inventory levels and product availability status.</p>
-              </div>
-              {(role === "Admin") && (
-              <button
-                onClick={() => openModal(null)}
-                className="bg-[#6C5CE7] hover:bg-[#5949D5] text-white font-semibold py-2 px-4 rounded-md text-base flex items-center space-x-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                  <path d="M12 4v16m8-8H4" />
-                </svg>
-                <span>Add Inventory</span>
-              </button>
-              )}
+            {/* Header */}
+            <div className="mb-2">
+              <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Inventory</h2>
             </div>
 
         {/* Inventory Table */}
@@ -309,6 +314,7 @@ function StockDeliveriesSection({ role }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
   const [selectedDelivery, setSelectedDelivery] = useState(null);
+  const [filters, setFilters] = useState({ itemName: '', buyerName: '' });
   const itemsPerPage = 5;
 
   useEffect(() => {
@@ -371,10 +377,25 @@ function StockDeliveriesSection({ role }) {
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  
+  // Get unique item names and buyer names for filters
+  const uniqueItemNames = [...new Set(stockDeliveries.map(d => d.item_name).filter(Boolean))];
+  const uniqueBuyerNames = [...new Set(stockDeliveries.map(d => d.supplier).filter(Boolean))];
+  
+  // Apply filters
+  const filteredDeliveries = stockDeliveries.filter(item => {
+    const matchesItem = !filters.itemName || item.item_name === filters.itemName;
+    const matchesBuyer = !filters.buyerName || item.supplier === filters.buyerName;
+    return matchesItem && matchesBuyer;
+  });
+  
   // Sort by ID descending (newest first)
-  const sortedDeliveries = [...stockDeliveries].sort((a, b) => b.id - a.id);
+  const sortedDeliveries = [...filteredDeliveries].sort((a, b) => b.id - a.id);
   const currentItems = sortedDeliveries.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(stockDeliveries.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredDeliveries.length / itemsPerPage);
+  
+  // Reset page when filters change
+  useEffect(() => { setCurrentPage(1); }, [filters.itemName, filters.buyerName]);
 
   const goToPage = (pageNumber) => {
     if (pageNumber < 1 || pageNumber > totalPages) return;
@@ -382,23 +403,29 @@ function StockDeliveriesSection({ role }) {
   };
 
   return (
-    <div className="mt-10">
-      <div className="mb-4 flex items-start justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Stocks & Deliveries</h2>
-          <p className="text-gray-600 mt-1">Track stock quantities and delivery status</p>
-        </div>
-        {role === "Admin" && (
-          <button
-            onClick={() => { setSelectedDelivery(null); setShowDeliveryModal(true); }}
-            className="bg-[#6C5CE7] hover:bg-[#5949D5] text-white font-semibold py-2 px-4 rounded-md text-base flex items-center space-x-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-              <path d="M12 4v16m8-8H4" />
-            </svg>
-            <span>Add Stock</span>
-          </button>
-        )}
+    <div className="mt-2">
+      <div className="mb-2">
+        <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Stocks & Deliveries</h2>
+      </div>
+
+      {/* Filters */}
+      <div className="flex items-center justify-end mb-2 space-x-3">
+        <select
+          className="px-3 py-2 border rounded bg-white"
+          value={filters.itemName}
+          onChange={e => setFilters({ ...filters, itemName: e.target.value })}
+        >
+          <option value="">All Items</option>
+          {uniqueItemNames.map(name => <option key={name} value={name}>{name}</option>)}
+        </select>
+        <select
+          className="px-3 py-2 border rounded bg-white"
+          value={filters.buyerName}
+          onChange={e => setFilters({ ...filters, buyerName: e.target.value })}
+        >
+          <option value="">All Buyers</option>
+          {uniqueBuyerNames.map(name => <option key={name} value={name}>{name}</option>)}
+        </select>
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-x-auto">

@@ -164,19 +164,6 @@ export default function Alertcontainer() {
         <div className="max-w-4xl mx-auto">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold text-gray-900">Alerts</h1>
-             {(role === "Admin") && (
-            <div className="flex items-center space-x-3">
-              <button 
-                onClick={openModal} 
-                className="bg-[#6C5CE7] hover:bg-[#5949D5] text-white font-semibold py-2 px-4 rounded-md flex items-center space-x-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 4v16m8-8H4" />
-                </svg>
-                <span>Add Alert</span>
-              </button>
-            </div>
-             )}
           </div>
 
           {showModal && <Addalert closeModal={closeModal} addAlert={handleAddAlert} />}
@@ -246,11 +233,11 @@ export default function Alertcontainer() {
 
           {/* Pagination */}
           {sortedAlerts.length > itemsPerPage && (
-            <div className="mt-6 flex justify-center space-x-2">
+            <div className="mt-4 flex justify-end space-x-2">
               <button 
                 onClick={() => goToPage(currentPage - 1)} 
                 disabled={currentPage === 1} 
-                className="px-3 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50 disabled:opacity-50"
               >
                 Previous
               </button>
@@ -270,7 +257,7 @@ export default function Alertcontainer() {
               <button 
                 onClick={() => goToPage(currentPage + 1)} 
                 disabled={currentPage === totalPages} 
-                className="px-3 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50 disabled:opacity-50"
               >
                 Next
               </button>

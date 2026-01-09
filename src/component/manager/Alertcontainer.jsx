@@ -130,20 +130,9 @@ export default function Alertcontainer() {
     <div>
       <section className="p-4 md:p-6 bg-[#eff1f9] min-h-screen">
         <div className="max-w-4xl mx-auto">
-          {/* Header with Add Alert button */}
+          {/* Header */}
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold text-gray-900">Alerts</h1>
-            <div className="flex items-center space-x-3">
-              <button 
-                onClick={openModal} 
-                className="bg-[#6C5CE7] hover:bg-[#5949D5] text-white font-semibold py-2 px-4 rounded-md flex items-center space-x-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 4v16m8-8H4" />
-                </svg>
-                <span>Add Alert</span>
-              </button>
-            </div>
           </div>
 
           {/* Add Alert Modal */}
